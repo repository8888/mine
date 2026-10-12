@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#fbfaf8;
+    --ink:#1c1b19;
+    --ink-soft:#6b6862;
+    --ink-faint:#9c9891;
+    --line:#e5e2dc;
+    --accent:#8a6f4e;
+    --accent-soft:#f0e9df;
+    --panel:#ffffff;
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --col:720px;
+    --read:19px;
+    --tap:32px;
+    --safe-l:env(safe-area-inset-left,0px);
+    --safe-r:env(safe-area-inset-right,0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;text-size-adjust:100%;
+    overscroll-behavior-y:none;
+  }
+  ::selection{background:#e7dcc9;}
+
+  /* ---------- header ---------- */
+  #topbar{
+    position:sticky;top:0;z-index:40;
+    background:rgba(251,250,248,.94);
+    backdrop-filter:saturate(180%) blur(12px);
+    -webkit-backdrop-filter:saturate(180%) blur(12px);
+    border-bottom:1px solid var(--line);
+    padding-left:var(--safe-l);padding-right:var(--safe-r);
+  }
+  .bar{max-width:var(--col);margin:0 auto;padding:0 24px;height:54px;display:flex;align-items:center;gap:10px;}
+  .brand{font-family:var(--sans);font-size:12px;letter-spacing:.04em;color:var(--ink-soft);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;}
+
+  .search{position:relative;display:flex;align-items:center;flex:0 0 auto;}
+  .search input{
+    font-family:var(--sans);font-size:12px;color:var(--ink);background:transparent;
+    border:1px solid var(--line);border-radius:999px;
+    padding:0 32px 0 13px;height:var(--tap);width:150px;outline:none;
+    -webkit-appearance:none;appearance:none;
+    transition:border-color .15s,width .2s,background .15s;
+  }
+  .search input:focus{border-color:var(--accent);width:210px;background:var(--panel);}
+  .search input::placeholder{color:var(--ink-faint);}
+  .search button{
+    position:absolute;right:3px;width:26px;height:26px;border:none;background:transparent;
+    color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;
+    border-radius:50%;padding:0;
+  }
+  .search button svg{width:14px;height:14px;fill:currentColor;}
+
+  .btn{
+    font-family:var(--sans);font-size:12px;line-height:1;color:var(--ink-soft);
+    background:transparent;border:1px solid var(--line);border-radius:999px;
+    height:var(--tap);padding:0 13px;cursor:pointer;white-space:nowrap;flex:0 0 auto;
+    display:inline-flex;align-items:center;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .btn:hover{border-color:var(--ink-faint);color:var(--ink);}
+  .btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent);}
+  .btn.icon{padding:0;width:var(--tap);justify-content:center;}
+  .btn.icon svg{width:15px;height:15px;fill:currentColor;}
+
+  /* ---------- player ---------- */
+  #player{max-width:var(--col);margin:0 auto;padding:0 24px 6px;display:flex;align-items:center;gap:7px;}
+  .pbtn{width:var(--tap);height:var(--tap);display:flex;align-items:center;justify-content:center;
+    border:none;background:transparent;color:var(--ink-soft);cursor:pointer;border-radius:50%;flex:0 0 auto;
+    transition:background .15s,color .15s;}
+  .pbtn:hover{background:var(--accent-soft);color:var(--accent);}
+  .pbtn svg{width:16px;height:16px;fill:currentColor;}
+  .pbtn.main svg{width:18px;height:18px;}
+  .pmeta{font-family:var(--sans);font-size:11.5px;letter-spacing:.02em;color:var(--ink-faint);
+    flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pmeta b{color:var(--ink-soft);font-weight:500;}
+  .pmeta.err{color:#a4443a;}
+  select.sel{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:999px;height:var(--tap);padding:0 8px;cursor:pointer;flex:0 0 auto;
+    -webkit-appearance:none;appearance:none;text-align:center;}
+  .voicetag{font-family:var(--sans);font-size:11px;letter-spacing:.06em;color:var(--accent);
+    background:var(--accent-soft);border-radius:999px;padding:6px 10px;white-space:nowrap;flex:0 0 auto;}
+  .spin{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;
+    border:1.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  /* ---------- bookmarks ---------- */
+  #panel{position:fixed;z-index:50;right:calc(16px + var(--safe-r));top:108px;
+    width:min(360px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;box-shadow:0 12px 40px rgba(28,27,25,.12);padding:8px;display:none;
+    max-height:62vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+  #panel.open{display:block;}
+  .prow{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:8px;cursor:pointer;}
+  .prow:hover{background:var(--accent-soft);}
+  .prow .n{font-family:var(--sans);font-size:10px;color:var(--accent);padding-top:3px;min-width:26px;}
+  .prow .t{font-size:14px;line-height:1.45;color:var(--ink-soft);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .prow .x{margin-left:auto;font-family:var(--sans);font-size:17px;color:var(--ink-faint);
+    padding:0 6px;line-height:1;}
+  .pempty{font-family:var(--sans);font-size:12.5px;color:var(--ink-faint);padding:16px 10px;text-align:center;}
+  .padd{width:100%;font-family:var(--sans);font-size:12.5px;color:var(--accent);background:var(--accent-soft);
+    border:none;border-radius:8px;padding:12px;cursor:pointer;margin-bottom:6px;}
+  .phead{font-family:var(--sans);font-size:9.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);padding:12px 12px 5px;}
+  .prow .sw{width:11px;height:11px;border-radius:3px;flex:0 0 auto;margin-top:4px;}
+  .prow .sw.y{background:#fbeeae;} .prow .sw.g{background:#d8ecd2;}
+  .prow .sw.p{background:#f8d9e6;} .prow .sw.b{background:#d5e6f5;}
+  .pwarn{font-family:var(--sans);font-size:11.5px;line-height:1.5;color:#8a6230;background:#faf1e2;
+    border-radius:8px;padding:10px 12px;margin:6px 0;}
+  .pbak{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;width:100%;margin-top:6px;}
+  #bak{display:none;padding:4px 2px 2px;}
+  #bak.open{display:block;}
+  #bak textarea{width:100%;height:88px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;line-height:1.45;color:var(--ink-soft);background:#f7f5f1;border:1px solid var(--line);
+    border-radius:8px;padding:9px;resize:vertical;outline:none;-webkit-appearance:none;}
+  #bak .brow{display:flex;gap:6px;margin-top:6px;}
+  #bak .brow button{flex:1 1 0;font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);
+    background:transparent;border:1px solid var(--line);border-radius:8px;padding:9px;cursor:pointer;}
+  #bak .brow button:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* ---------- article ---------- */
+  #app{max-width:var(--col);margin:0 auto;
+    padding:56px calc(24px + var(--safe-l)) 40vh calc(24px + var(--safe-r));}
+  .kicker{font-size:12px;font-family:var(--sans);color:var(--ink-faint);letter-spacing:.08em;
+    text-transform:uppercase;margin:0 0 10px;}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,5vw,42px);
+    line-height:1.18;letter-spacing:-.01em;margin:0 0 46px;}
+  p.para{font-size:var(--read);line-height:1.8;margin:0 0 26px;}
+  p.para em,.epi em,.note em,.fnote em,blockquote.quote em{font-style:italic;}
+
+  /* ---------- printed-page furniture ---------- */
+  .pgbrk{display:flex;align-items:baseline;gap:14px;margin:44px 0 30px;
+    border-top:1px solid var(--line);padding-top:9px;}
+  .pgbrk.verso{flex-direction:row-reverse;}
+  .pgbrk .rh{font-family:var(--sans);font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-faint);flex:1 1 auto;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pgbrk.verso .rh{text-align:right;}
+  .pgbrk .folio{font-family:var(--serif);font-size:13px;color:var(--accent);
+    flex:0 0 auto;font-variant-numeric:oldstyle-nums;}
+  .pgbrk.first{border-top:none;margin-top:0;padding-top:0;}
+  .pgbrk.first .rh{display:none;}
+
+  .epi{margin:0 auto 34px;padding:0 0 0 34px;max-width:88%;
+    font-size:calc(var(--read) - 2.5px);line-height:1.72;color:var(--ink-soft);}
+  .epi .cite{display:block;margin-top:10px;text-align:right;font-style:italic;
+    font-size:calc(var(--read) - 4px);color:var(--ink-faint);}
+
+  .secno{font-family:var(--serif);font-size:calc(var(--read) + 1px);text-align:center;
+    letter-spacing:.14em;color:var(--ink-soft);margin:38px 0 26px;}
+
+  .fnote{font-size:calc(var(--read) - 5px);line-height:1.62;color:var(--ink-soft);
+    margin:30px 0 26px;padding-top:11px;border-top:1px solid var(--line);
+    display:flex;gap:9px;align-items:flex-start;}
+  .fnote .mk{flex:0 0 auto;color:var(--accent);}
+  .fnote .bd{flex:1 1 auto;min-width:0;}
+  blockquote.quote{margin:0 0 26px;padding:2px 0 2px 22px;border-left:2px solid var(--line);
+    font-size:calc(var(--read) - 1.5px);line-height:1.74;color:var(--ink-soft);}
+  .note{font-size:calc(var(--read) - 4px);line-height:1.7;color:var(--ink-soft);margin:0 0 26px;
+    padding:18px 20px;background:#f5f3ef;border-radius:8px;}
+  .note::before{content:attr(data-label);display:block;font-family:var(--sans);font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px;}
+  table.ab{width:100%;border-collapse:collapse;margin:0 0 26px;
+    font-size:calc(var(--read) - 3px);line-height:1.62;}
+  table.ab th{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:500;text-align:left;padding:0 14px 8px 0;border-bottom:1px solid var(--line);}
+  table.ab td{padding:13px 14px 13px 0;border-bottom:1px solid var(--line);vertical-align:top;width:50%;}
+  table.ab tr:last-child td{border-bottom:none;}
+
+  /* ---------- reading units ---------- */
+  .s{border-radius:3px;transition:background .3s;}
+  .s.reading{background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft);}
+  .s.found{background:#e7dcc9;box-shadow:0 0 0 3px #e7dcc9;}
+  .w{cursor:default;}
+  body.dict .w{cursor:help;}
+  body.dict .w:hover,.w.on{background:#e7dcc9;border-radius:3px;box-shadow:0 0 0 2px #e7dcc9;}
+
+  /* ---------- highlighter ---------- */
+  mark.hl{background:transparent;color:inherit;border-radius:2px;
+    padding:.12em 0;box-decoration-break:clone;-webkit-box-decoration-break:clone;}
+  mark.hl.y{background:#fbeeae;}
+  mark.hl.g{background:#d8ecd2;}
+  mark.hl.p{background:#f8d9e6;}
+  mark.hl.b{background:#d5e6f5;}
+
+  /* ---------- selection bar ---------- */
+  #selbar{position:fixed;z-index:65;display:none;gap:2px;padding:4px;align-items:center;
+    background:var(--ink);border-radius:99px;box-shadow:0 8px 26px rgba(28,27,25,.28);}
+  #selbar.open{display:flex;}
+  #selbar button{font-family:var(--sans);font-size:12px;color:#f4f1ec;background:transparent;
+    border:none;border-radius:99px;padding:9px 14px;cursor:pointer;white-space:nowrap;}
+  #selbar button:hover{background:rgba(255,255,255,.14);}
+  #selbar .dot{width:22px;height:22px;border-radius:50%;padding:0;margin:0 1px;flex:0 0 auto;
+    border:1.5px solid rgba(255,255,255,.28);}
+  #selbar .dot:hover{border-color:#fff;transform:scale(1.12);}
+  #selbar .dot.y{background:#fbeeae;}
+  #selbar .dot.g{background:#d8ecd2;}
+  #selbar .dot.p{background:#f8d9e6;}
+  #selbar .dot.b{background:#d5e6f5;}
+  #selbar .erase{padding:9px 11px;font-size:14px;line-height:1;}
+  #selbar .sep{width:1px;background:rgba(255,255,255,.16);margin:6px 1px;}
+
+  /* ---------- explain tooltip ---------- */
+  #tip{position:fixed;z-index:60;width:min(360px,calc(100vw - 24px));
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 10px 34px rgba(28,27,25,.14);padding:14px 16px;display:none;font-family:var(--sans);}
+  #tip.open{display:block;}
+  #tip .hw{font-family:var(--serif);font-size:19px;line-height:1.3;margin-bottom:2px;}
+  #tip .infl{font-size:11.5px;color:var(--ink-faint);margin-bottom:9px;}
+  #tip .tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:11px;}
+  #tip .chip{display:inline-block;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 9px;}
+  #tip .chip.gram{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;
+    text-transform:none;color:var(--ink-soft);background:#f1efeb;}
+  #tip .chip.reg{text-transform:none;letter-spacing:.02em;color:#7a5d7a;background:#f2ecf2;}
+  #tip .freq{display:inline-flex;gap:3px;align-items:center;margin-left:auto;}
+  #tip .freq i{width:6px;height:6px;border-radius:50%;background:var(--line);display:block;}
+  #tip .freq i.on{background:var(--accent);}
+  #tip .sec{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  #tip .sec.first{border-top:none;padding-top:0;margin-top:0;}
+  #tip .lbl{font-size:9.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);margin-bottom:5px;}
+  #tip .en{font-size:14px;line-height:1.55;color:var(--ink);}
+  #tip .ex{font-family:var(--serif);font-size:13.5px;line-height:1.5;color:var(--ink-soft);
+    margin-top:8px;padding-left:11px;border-left:2px solid var(--accent-soft);}
+  #tip .why{font-size:13.5px;line-height:1.55;color:var(--ink);}
+  #tip .load{font-size:12.5px;color:var(--ink-faint);}
+  #tip .err{font-size:12.5px;line-height:1.5;color:#a4443a;}
+  #tip .acts{display:flex;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  #tip .acts button{font-family:var(--sans);font-size:12px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:999px;padding:8px 13px;cursor:pointer;white-space:nowrap;}
+  #tip .acts button:hover{border-color:var(--accent);color:var(--accent);}
+
+  noscript{display:block;max-width:var(--col);margin:60px auto;padding:0 24px;
+    font-size:16px;line-height:1.7;color:var(--ink-soft);}
+
+  /* ================= TABLET  (iPad portrait & landscape) ================= */
+  @media (min-width:768px){
+    :root{--read:20px;--tap:38px;}
+    .bar{height:60px;}
+    #app{padding-top:64px;}
+  }
+  @media (min-width:1024px){
+    :root{--col:760px;--read:20.5px;}
+  }
+  /* Touch devices: no hover lookup, bigger targets, roomier popovers */
+  @media (hover:none),(pointer:coarse){
+    :root{--tap:42px;}
+    .w{-webkit-tap-highlight-color:transparent;}
+    #tip{width:min(400px,calc(100vw - 24px));padding:16px 18px;}
+    #tip .acts button{padding:11px 16px;font-size:13px;}
+    #selbar button{padding:12px 18px;font-size:13px;}
+    .prow{padding:14px 12px;}
+    .prow .x{padding:0 10px;font-size:19px;}
+    .search input{font-size:16px;}      /* 16px stops iOS from zooming on focus */
+    .search input:focus{width:240px;}
+  }
+
+  /* ---------- phone ---------- */
+  @media (max-width:640px){
+    :root{--read:17.5px;}
+    .brand{display:none;}
+    .bar{padding:0 16px;gap:7px;}
+    #player{padding:0 16px 6px;gap:5px;}
+    #app{padding:36px 16px 40vh;}
+    .search{flex:1 1 auto;}
+    .search input{width:100%;}
+    .search input:focus{width:100%;}
+    .voicetag{display:none;}
+  }
+
+  /* ---------- API key ---------- */
+  .pkey{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:4px 12px 8px;}
+  .pkey .t{flex:1 1 100%;font-family:var(--sans);font-size:12px;line-height:1.5;color:var(--ink-soft);}
+  .pkey button{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer;}
+  .pkey button:hover{border-color:var(--accent);color:var(--accent);}
+  #keybox{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;
+    background:rgba(28,27,25,.28);padding:16px;}
+  #keybox.open{display:flex;}
+  .kcard{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 12px 40px rgba(28,27,25,.18);padding:18px;font-family:var(--sans);margin:0;}
+  .khead{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px;}
+  .khint{font-size:12px;line-height:1.55;color:var(--ink-soft);margin:0 0 12px;}
+  #keyInput{width:100%;height:38px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;
+    color:var(--ink);background:#f7f5f1;border:1px solid var(--line);border-radius:8px;padding:0 10px;
+    outline:none;-webkit-appearance:none;appearance:none;}
+  #keyInput:focus{border-color:var(--accent);}
+  .kerr{min-height:18px;font-size:11.5px;line-height:1.5;color:#a4443a;margin:6px 0 4px;}
+  .kbtns{display:flex;gap:6px;justify-content:flex-end;}
+  .kbtns button{font-family:var(--sans);font-size:12px;border-radius:8px;padding:9px 14px;cursor:pointer;
+    border:1px solid var(--line);background:transparent;color:var(--ink-soft);}
+  .kbtns button[type="submit"]{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent);}
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="bar">
+    <div class="brand" id="brand"></div>
+    <form class="search" id="searchForm">
+      <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <button type="submit" id="qBtn">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      </button>
+    </form>
+    <button class="btn" id="dictBtn" data-action="dict" aria-pressed="false"></button>
+    <button class="btn icon" data-action="panel" id="bmBtn">
+      <svg viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2z"/></svg>
+    </button>
+  </div>
+  <div id="player">
+    <button class="pbtn" data-action="prev"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5l-9 7 9 7z"/></svg></button>
+    <button class="pbtn main" id="playBtn" data-action="play"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+    <button class="pbtn" data-action="next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <span class="pmeta" id="pmeta"></span>
+    <select class="sel" data-action="gran" id="granSel"></select>
+    <select class="sel" data-action="model" id="modelSel"></select>
+    <span class="voicetag" id="voicetag"></span>
+  </div>
+</header>
+
+<div id="panel"></div>
+<div id="selbar">
+  <button data-action="sel-explain" id="selExplain"></button>
+  <span class="sep"></span>
+  <button data-action="sel-play" id="selPlay"></button>
+  <span class="sep"></span>
+  <button class="dot y" data-action="hl" data-c="y"></button>
+  <button class="dot g" data-action="hl" data-c="g"></button>
+  <button class="dot p" data-action="hl" data-c="p"></button>
+  <button class="dot b" data-action="hl" data-c="b"></button>
+  <button class="erase" data-action="hl-erase" id="selErase">&#9003;</button>
+</div>
+<div id="tip"></div>
+
+<div id="keybox">
+  <form class="kcard" id="keyForm" role="dialog" aria-modal="true" aria-labelledby="keyTitle" autocomplete="off">
+    <div class="khead" id="keyTitle">Gemini API key</div>
+    <p class="khint" id="keyHint"></p>
+    <input id="keyInput" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+    <div class="kerr" id="keyErr" role="alert"></div>
+    <div class="kbtns">
+      <button type="button" data-action="key-cancel" id="keyCancel">Cancel</button>
+      <button type="submit" id="keyOk">Use key</button>
+    </div>
+  </form>
+</div>
+
+<main id="app"></main>
+
+<noscript id="ns"></noscript>
+
+<script>
+'use strict';
+(function () {
+
+/* ══════════════════════════════════════════════════════════════════
+   ①  CONTENT — replace this object to publish a different text.
+       Nothing below section ③ needs to change.
+
+       Block types:
+         {t:'p', x:'...'}                 paragraph
+         {t:'q', x:'...'}                 block quotation
+         {t:'n', x:'...'}                 note / footnote box
+         {t:'t', head:['A','B'], rows:[[left,right], ...]}   two-column table
+
+       `id` keys the saved bookmarks. Change it when you change the text,
+       otherwise the old bookmarks point at the wrong paragraphs.
+   ══════════════════════════════════════════════════════════════════ */
+var ARTICLE = {
+  id: 'wu-2018-tyranny-of-convenience',
+  kicker: 'The New York Times — Opinion · Tim Wu · February 16, 2018',
+  title: 'The Tyranny of Convenience',
+  blocks: [
+
+{t:'p',x:`Convenience is the most underestimated and least understood force in the world today. As a driver of human decisions, it may not offer the illicit thrill of Freud’s unconscious sexual desires or the mathematical elegance of the economist’s incentives. Convenience is boring. But boring is not the same thing as trivial.`},
+
+{t:'p',x:`In the developed nations of the 21st century, convenience — that is, more efficient and easier ways of doing personal tasks — has emerged as perhaps the most powerful force shaping our individual lives and our economies. This is particularly true in America, where, despite all the paeans to freedom and individuality, one sometimes wonders whether convenience is in fact the supreme value.`},
+
+{t:'p',x:`As Evan Williams, a co-founder of Twitter, recently put it, “Convenience decides everything.” Convenience seems to make our decisions for us, trumping what we like to imagine are our true preferences. (I prefer to brew my coffee, but Starbucks instant is so convenient I hardly ever do what I “prefer.”) Easy is better, easiest is best.`},
+
+{t:'p',x:`Convenience has the ability to make other options unthinkable. Once you have used a washing machine, laundering clothes by hand seems irrational, even if it might be cheaper. After you have experienced streaming television, waiting to see a show at a prescribed hour seems silly, even a little undignified. To resist convenience — not to own a cellphone, not to use Google — has come to require a special kind of dedication that is often taken for eccentricity, if not fanaticism.`},
+
+{t:'p',x:`For all its influence as a shaper of individual decisions, the greater power of convenience may arise from decisions made in aggregate, where it is doing so much to structure the modern economy. Particularly in tech-related industries, the battle for convenience is the battle for industry dominance.`},
+
+{t:'p',x:`Americans say they prize competition, a proliferation of choices, the little guy. Yet our taste for convenience begets more convenience, through a combination of the economics of scale and the power of habit. The easier it is to use Amazon, the more powerful Amazon becomes — and thus the easier it becomes to use Amazon. Convenience and monopoly seem to be natural bedfellows.`},
+
+{t:'p',x:`Given the growth of convenience — as an ideal, as a value, as a way of life — it is worth asking what our fixation with it is doing to us and to our country. I don’t want to suggest that convenience is a force for evil. Making things easier isn’t wicked. On the contrary, it often opens up possibilities that once seemed too onerous to contemplate, and it typically makes life less arduous, especially for those most vulnerable to life’s drudgeries.`},
+
+{t:'p',x:`But we err in presuming convenience is always good, for it has a complex relationship with other ideals that we hold dear. Though understood and promoted as an instrument of liberation, convenience has a dark side. With its promise of smooth, effortless efficiency, it threatens to erase the sort of struggles and challenges that help give meaning to life. Created to free us, it can become a constraint on what we are willing to do, and thus in a subtle way it can enslave us.`},
+
+{t:'p',x:`It would be perverse to embrace inconvenience as a general rule. But when we let convenience decide everything, we surrender too much.`},
+
+{t:'p',x:`Convenience as we now know it is a product of the late 19th and early 20th centuries, when labor-saving devices for the home were invented and marketed. Milestones include the invention of the first “convenience foods,” such as canned pork and beans and Quaker Quick Oats; the first electric clothes-washing machines; cleaning products like Old Dutch scouring powder; and other marvels including the electric vacuum cleaner, instant cake mix and the microwave oven.`},
+
+{t:'p',x:`Convenience was the household version of another late-19th-century idea, industrial efficiency, and its accompanying “scientific management.” It represented the adaptation of the ethos of the factory to domestic life.`},
+
+{t:'p',x:`However mundane it seems now, convenience, the great liberator of humankind from labor, was a utopian ideal. By saving time and eliminating drudgery, it would create the possibility of leisure. And with leisure would come the possibility of devoting time to learning, hobbies or whatever else might really matter to us. Convenience would make available to the general population the kind of freedom for self-cultivation once available only to the aristocracy. In this way convenience would also be the great leveler.`},
+
+{t:'p',x:`This idea — convenience as liberation — could be intoxicating. Its headiest depictions are in the science fiction and futurist imaginings of the mid-20th century. From serious magazines like Popular Mechanics and from goofy entertainments like “The Jetsons” we learned that life in the future would be perfectly convenient. Food would be prepared with the push of a button. Moving sidewalks would do away with the annoyance of walking. Clothes would clean themselves or perhaps self-destruct after a day’s wearing. The end of the struggle for existence could at last be contemplated.`},
+
+{t:'p',x:`The dream of convenience is premised on the nightmare of physical work. But is physical work always a nightmare? Do we really want to be emancipated from all of it? Perhaps our humanity is sometimes expressed in inconvenient actions and time-consuming pursuits. Perhaps this is why, with every advance of convenience, there have always been those who resist it. They resist out of stubbornness, yes (and because they have the luxury to do so), but also because they see a threat to their sense of who they are, to their feeling of control over things that matter to them.`},
+
+{t:'p',x:`By the late 1960s, the first convenience revolution had begun to sputter. The prospect of total convenience no longer seemed like society’s greatest aspiration. Convenience meant conformity. The counterculture was about people’s need to express themselves, to fulfill their individual potential, to live in harmony with nature rather than constantly seeking to overcome its nuisances. Playing the guitar was not convenient. Neither was growing one’s own vegetables or fixing one’s own motorcycle. But such things were seen to have value nevertheless — or rather, as a result. People were looking for individuality again.`},
+
+{t:'p',x:`Perhaps it was inevitable, then, that the second wave of convenience technologies — the period we are living in — would co-opt this ideal. It would conveniencize individuality.`},
+
+{t:'p',x:`You might date the beginning of this period to the advent of the Sony Walkman in 1979. With the Walkman we can see a subtle but fundamental shift in the ideology of convenience. If the first convenience revolution promised to make life and work easier for you, the second promised to make it easier to be you. The new technologies were catalysts of selfhood. They conferred efficiency on self-expression.`},
+
+{t:'p',x:`Consider the man of the early 1980s, strolling down the street with his Walkman and earphones. He is enclosed in an acoustic environment of his choosing. He is enjoying, out in public, the kind of self-expression he once could experience only in his private den. A new technology is making it easier for him to show who he is, if only to himself. He struts around the world, the star of his own movie.`},
+
+{t:'p',x:`So alluring is this vision that it has come to dominate our existence. Most of the powerful and important technologies created over the past few decades deliver convenience in the service of personalization and individuality. Think of the VCR, the playlist, the Facebook page, the Instagram account. This kind of convenience is no longer about saving physical labor — many of us don’t do much of that anyway. It is about minimizing the mental resources, the mental exertion, required to choose among the options that express ourselves. Convenience is one-click, one-stop shopping, the seamless experience of “plug and play.” The ideal is personal preference with no effort.`},
+
+{t:'p',x:`We are willing to pay a premium for convenience, of course — more than we often realize we are willing to pay. During the late 1990s, for example, technologies of music distribution like Napster made it possible to get music online at no cost, and lots of people availed themselves of the option. But though it remains easy to get music free, no one really does it anymore. Why? Because the introduction of the iTunes store in 2003 made buying music even more convenient than illegally downloading it. Convenient beat out free.`},
+
+{t:'p',x:`As task after task becomes easier, the growing expectation of convenience exerts a pressure on everything else to be easy or get left behind. We are spoiled by immediacy and become annoyed by tasks that remain at the old level of effort and time. When you can skip the line and buy concert tickets on your phone, waiting in line to vote in an election is irritating. This is especially true for those who have never had to wait in lines (which may help explain the low rate at which young people vote).`},
+
+{t:'p',x:`The paradoxical truth I’m driving at is that today’s technologies of individualization are technologies of mass individualization. Customization can be surprisingly homogenizing. Everyone, or nearly everyone, is on Facebook: It is the most convenient way to keep track of your friends and family, who in theory should represent what is unique about you and your life. Yet Facebook seems to make us all the same. Its format and conventions strip us of all but the most superficial expressions of individuality, such as which particular photo of a beach or mountain range we select as our background image.`},
+
+{t:'p',x:`I do not want to deny that making things easier can serve us in important ways, giving us many choices (of restaurants, taxi services, open-source encyclopedias) where we used to have only a few or none. But being a person is only partly about having and exercising choices. It is also about how we face up to situations that are thrust upon us, about overcoming worthy challenges and finishing difficult tasks — the struggles that help make us who we are. What happens to human experience when so many obstacles and impediments and requirements and preparations have been removed?`},
+
+{t:'p',x:`Today’s cult of convenience fails to acknowledge that difficulty is a constitutive feature of human experience. Convenience is all destination and no journey. But climbing a mountain is different from taking the tram to the top, even if you end up at the same place. We are becoming people who care mainly or only about outcomes. We are at risk of making most of our life experiences a series of trolley rides.`},
+
+{t:'p',x:`Convenience has to serve something greater than itself, lest it lead only to more convenience. In her 1963 classic, “The Feminine Mystique,” Betty Friedan looked at what household technologies had done for women and concluded that they had just created more demands. “Even with all the new labor-saving appliances,” she wrote, “the modern American housewife probably spends more time on housework than her grandmother.” When things become easier, we can seek to fill our time with more “easy” tasks. At some point, life’s defining struggle becomes the tyranny of tiny chores and petty decisions.`},
+
+{t:'p',x:`An unwelcome consequence of living in a world where everything is “easy” is that the only skill that matters is the ability to multitask. At the extreme, we don’t actually do anything; we only arrange what will be done, which is a flimsy basis for a life.`},
+
+{t:'p',x:`We need to consciously embrace the inconvenient — not always, but more of the time. Nowadays individuality has come to reside in making at least some inconvenient choices. You need not churn your own butter or hunt your own meat, but if you want to be someone, you cannot allow convenience to be the value that transcends all others. Struggle is not always a problem. Sometimes struggle is a solution. It can be the solution to the question of who you are.`},
+
+{t:'p',x:`Embracing inconvenience may sound odd, but we already do it without thinking of it as such. As if to mask the issue, we give other names to our inconvenient choices: We call them hobbies, avocations, callings, passions. These are the noninstrumental activities that help to define us. They reward us with character because they involve an encounter with meaningful resistance — with nature’s laws, with the limits of our own bodies — as in carving wood, melding raw ingredients, fixing a broken appliance, writing code, timing waves or facing the point when the runner’s legs and lungs begin to rebel against him.`},
+
+{t:'p',x:`Such activities take time, but they also give us time back. They expose us to the risk of frustration and failure, but they also can teach us something about the world and our place in it.`},
+
+{t:'p',x:`So let’s reflect on the tyranny of convenience, try more often to resist its stupefying power, and see what happens. We must never forget the joy of doing something slow and something difficult, the satisfaction of not doing what is easiest. The constellation of inconvenient choices may be all that stands between us and a life of total, efficient conformity.`},
+
+{t:'n',x:`Tim Wu is a law professor at Columbia, the author of “The Attention Merchants: The Epic Struggle to Get Inside Our Heads” and a contributing opinion writer.`}
+
+  ]
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   ②  INTERFACE STRINGS — one place for every visible label.
+       Translate this block to change the whole UI language.
+   ══════════════════════════════════════════════════════════════════ */
+var UI = {
+  searchPlaceholder : 'Look up a word or phrase…',
+  searchLabel       : 'Search',
+  dictionary        : 'Dictionary',
+  dictionaryHint    : 'Turn on, then tap or hover a word',
+  bookmarks         : 'Bookmarks',
+  prev              : 'Previous',
+  play              : 'Play',
+  pause             : 'Pause',
+  next              : 'Next',
+  ready             : 'Ready',
+  synthesizing      : 'Synthesizing',
+  narrating         : 'Narrating',
+  paused            : 'Paused',
+  selection         : 'Selection',
+  unitSentence      : 'Sentence',
+  unitParagraph     : 'Paragraph',
+  modelFlash        : 'Flash',
+  modelPro          : 'Pro',
+  explain           : 'Explain',
+  listen            : '▶  Listen',
+  findInText        : '↓  Find in text',
+  explaining        : 'Looking it up…',
+  addBookmark       : 'Bookmark current position',
+  noBookmarks       : 'No bookmarks yet.',
+  noteLabel         : 'note',
+  dictGeneral       : 'Dictionary meaning',
+  dictContextual    : 'In this passage',
+  dictParaphrase    : 'In plain English',
+  freqLabel         : 'How common this word is',
+  highlight         : 'Highlight',
+  eraseHighlight    : 'Remove highlight',
+  hdgBookmarks      : 'Bookmarks',
+  hdgHighlights     : 'Highlights',
+  noHighlights      : 'No highlights yet.',
+  backup            : 'Backup & restore',
+  backupHint        : 'Copy this text somewhere safe. Paste it back and press Restore to bring your bookmarks and highlights back.',
+  copy              : 'Copy',
+  copied            : 'Copied',
+  restore           : 'Restore',
+  restored          : 'Restored',
+  badBackup         : 'That backup could not be read.',
+  storageWarn       : 'This page cannot save to the browser here, so your marks will be lost when you close it. Use Backup & restore below to keep them.',
+  noscript          : 'This reader needs JavaScript for the audio player and the dictionary.',
+  hdgKey            : 'Gemini API key',
+  keySrcCode        : 'Using the key written in the code (API_KEY).',
+  keySrcTab         : 'Using the key you entered. It is kept for this tab only.',
+  keySrcCanvas      : 'Using Gemini Canvas — no key needed.',
+  keySrcNone        : 'No key yet. You will be asked the first time audio or the dictionary needs one.',
+  keyMissingCode    : 'KEY_MODE is "code" but API_KEY is empty.',
+  keyEnter          : 'Enter key',
+  keyChange         : 'Change key',
+  keyForget         : 'Forget key',
+  keyTitle          : 'Gemini API key',
+  keyHint           : 'Paste your Google AI Studio API key. It stays in this tab\'s memory only and is forgotten when you close or reload the tab.',
+  keyPlaceholder    : 'AIza…',
+  keyUse            : 'Use key',
+  keyCancel         : 'Cancel',
+  keyEmpty          : 'Paste a key first.',
+  keyBad            : 'Google rejected that key. Check it and try again.',
+  keyBadCode        : 'Google rejected the API_KEY written in the code.',
+  keyNeeded         : 'An API key is needed outside Gemini Canvas.'
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   ③  GEMINI API
+
+   KEY_MODE — where the page gets its Gemini key. Pick one:
+     'auto'   (default) Uses API_KEY below if it is filled in. Otherwise
+              tries Gemini Canvas, which supplies the key itself (billed to
+              the Gemini app plan). Opened as a local file or on github.io,
+              or refused by Google, it asks for a key in the page instead.
+     'code'   Always uses API_KEY below. LOCAL COPIES ONLY — a file with a
+              key in it must never be committed or uploaded.
+     'prompt' Always asks in the page. The key lives in memory only and is
+              gone when the tab is closed or reloaded.
+     'canvas' Never asks. For Gemini Canvas / AI Studio, which inject the key.
+   ══════════════════════════════════════════════════════════════════ */
+var KEY_MODE   = 'auto';
+var API_KEY    = '';
+var API_ROOT   = 'https://generativelanguage.googleapis.com/v1beta/models/';
+/* Model IDs get retired without warning — a request to a dead one comes back
+   404 "no longer available". So each role lists candidates newest-first and the
+   app walks down the list until one answers, then remembers the winner.
+   Add newer IDs to the front as Google ships them; nothing else needs editing. */
+var TEXT_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+var TTS_MODELS  = {
+  flash: ['gemini-3.8-flash-lite-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'],
+  pro:   ['gemini-3.8-flash-tts', 'gemini-2.5-pro-preview-tts', 'gemini-3.1-flash-tts-preview']
+};
+var VOICE      = 'Aoede';
+/* Gemini 3.8+ TTS reads `text` verbatim, so delivery goes in speech_metadata.style
+   (keep it short). Older *-preview models still take the direction as a text prefix. */
+var TTS_STYLE        = 'calm, unhurried audiobook narration';
+var TTS_STYLE_LEGACY = 'Read the following aloud as a calm, articulate audiobook narrator. Unhurried pace, clear diction, natural prosody.\n\n';
+var PARA_MAX   = 1400;
+var SEL_MAX    = 2500;
+var SCROLL_TOL = 30;     /* px of scroll tolerated before popovers close */
+
+/* ══════════════════ nothing below needs editing ══════════════════ */
+
+var state = {
+  dict:false, panelOpen:false, bakOpen:false, bookmarks:[], highlights:[],
+  gran:'sent', ttsModel:'flash',
+  mode:'article', unit:-1, playing:false,
+  status:'ready', message:'',
+  sel:null, tip:null
+};
+
+var SENTS = [], DISP = [], ITAL = [], UNITS = [];
+var audioCache = new Map(), explainCache = new Map();
+var audioEl = new Audio();
+var hoverTimer = null, selTimer = null, foundTimer = null;
+var activeWord = null, anchorY = 0;
+var CAN_HOVER = window.matchMedia ? window.matchMedia('(hover:hover) and (pointer:fine)').matches : true;
+
+var appEl = document.getElementById('app'),
+    tipEl = document.getElementById('tip'),
+    panelEl = document.getElementById('panel'),
+    selbar = document.getElementById('selbar'),
+    metaEl = document.getElementById('pmeta'),
+    playEl = document.getElementById('playBtn'),
+    dictEl = document.getElementById('dictBtn'),
+    qEl = document.getElementById('q'),
+    keyBoxEl = document.getElementById('keybox'),
+    keyInEl = document.getElementById('keyInput'),
+    keyErrEl = document.getElementById('keyErr');
+
+/* ---------------- text helpers ---------------- */
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+var WORD_RE = /[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'’\-]*/g;
+function wordize(text){
+  var out = '', last = 0, m; WORD_RE.lastIndex = 0;
+  while ((m = WORD_RE.exec(text)) !== null) {
+    out += esc(text.slice(last, m.index));
+    out += '<span class="w" data-w="' + esc(m[0]) + '">' + esc(m[0]) + '</span>';
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
+function bodyHtml(t){ return state.dict ? wordize(t) : esc(t); }
+
+var ABBR_RE = /(?:^|[\s(])(?:cf|i\.e|e\.g|etc|Ch|Chs|n|no|nos|vs|Mr|Mrs|Ms|Dr|St|p|pp|esp|Prof|viz|al|ed|eds|trans|fig|vol)\.$/i;
+function splitSentences(text){
+  var out = [], start = 0, i, j, k;
+  for (i = 0; i < text.length; i++) {
+    var c = text.charAt(i);
+    if (c !== '.' && c !== '!' && c !== '?') continue;
+    j = i + 1;
+    while (j < text.length && '.!?)]"\'’”'.indexOf(text.charAt(j)) > -1) j++;
+    if (j >= text.length) break;
+    k = j; while (k < text.length && /\s/.test(text.charAt(k))) k++;
+    if (k === j) continue;
+    if (!/[A-Z"'(“‘]/.test(text.charAt(k))) continue;
+    var cand = text.slice(start, j);
+    if (ABBR_RE.test(cand)) continue;
+    if (cand.trim()) out.push(cand.trim());
+    start = k; i = k - 1;
+  }
+  var tail = text.slice(start).trim();
+  if (tail) out.push(tail);
+  return out.length ? out : [text];
+}
+/* Pull *emphasis* out of a sentence: returns the clean text plus the character
+   ranges that were italic. A lone asterisk (a footnote reference such as
+   "(kalē)*") has no partner, so the regex leaves it alone as literal text. */
+var EM_RE = /\*([^*\s][^*]*?)\*/g;
+function stripEm(s){
+  var out = '', its = [], last = 0, m;
+  EM_RE.lastIndex = 0;
+  while ((m = EM_RE.exec(s)) !== null) {
+    out += s.slice(last, m.index);
+    var a = out.length;
+    out += m[1];
+    its.push([a, out.length]);
+    last = m.index + m[0].length;
+  }
+  return { t: out + s.slice(last), i: its };
+}
+
+/* SENTS = what gets spoken.  DISP = what gets printed.  ITAL = italic ranges.
+   Page rules and section numbers carry no sentences, so they are never read. */
+function buildSents(){
+  SENTS = []; DISP = []; ITAL = [];
+  ARTICLE.blocks.forEach(function(b){
+    if (b.t === 'pg' || b.t === 'sec') {
+      SENTS.push([]); DISP.push([]); ITAL.push([]);
+    } else if (b.t === 't') {
+      var spoken = [], shown = [], its = [], h = b.head || ['A','B'];
+      b.rows.forEach(function(r){
+        [0,1].forEach(function(k){
+          var e = stripEm(r[k]);
+          spoken.push(h[k] + '. ' + e.t + '.'); shown.push(e.t); its.push(e.i);
+        });
+      });
+      SENTS.push(spoken); DISP.push(shown); ITAL.push(its);
+    } else {
+      var sp = [], sh = [], it = [];
+      splitSentences(b.x).forEach(function(s){
+        var e = stripEm(s);
+        sp.push(e.t); sh.push(e.t); it.push(e.i);
+      });
+      SENTS.push(sp); DISP.push(sh); ITAL.push(it);
+    }
+  });
+}
+function blockText(bi){
+  var b = ARTICLE.blocks[bi];
+  if (!b) return '';
+  if (b.t === 'pg')  return 'p. ' + (b.n || '') + (b.h ? ' — ' + b.h : '');
+  if (b.t === 'sec') return 'Section ' + b.x;
+  return (DISP[bi] && DISP[bi].length) ? DISP[bi].join(' ') : (b.x || '');
+}
+function cleanTts(s){ return s.replace(/[²³¹⁰-₟]/g,'').replace(/\s+/g,' ').trim(); }
+
+function buildUnits(){
+  UNITS = [];
+  SENTS.forEach(function(sents, bi){
+    if (state.gran === 'sent') {
+      sents.forEach(function(s, si){ UNITS.push({ b:bi, s0:si, s1:si, text:cleanTts(s) }); });
+    } else {
+      var s0 = 0, buf = '';
+      sents.forEach(function(s, si){
+        if (buf && (buf + ' ' + s).length > PARA_MAX) {
+          UNITS.push({ b:bi, s0:s0, s1:si - 1, text:cleanTts(buf) }); s0 = si; buf = s;
+        } else buf = buf ? buf + ' ' + s : s;
+      });
+      if (buf) UNITS.push({ b:bi, s0:s0, s1:sents.length - 1, text:cleanTts(buf) });
+    }
+  });
+}
+
+/* ---------------- bookmark persistence ---------------- */
+/* Bookmarks and highlights live together under one key.
+
+   Sandboxed frames (Gemini Canvas, some in-app browsers) hand the page an
+   opaque origin, where localStorage either throws or is wiped the moment the
+   frame goes away — which is why marks vanish when the app is closed. We probe
+   for real, readable storage at boot; if it is not there we say so and fall
+   back to the Backup & restore box, which works everywhere. */
+var STORE = 'reader:' + ARTICLE.id;
+var STORAGE_OK = false;
+
+function probeStorage(){
+  try {
+    var k = STORE + ':probe';
+    window.localStorage.setItem(k, '1');
+    var ok = window.localStorage.getItem(k) === '1';
+    window.localStorage.removeItem(k);
+    return ok;
+  } catch (e) { return false; }
+}
+function sanitize(data){
+  var nb = ARTICLE.blocks.length;
+  var b = Array.isArray(data && data.b) ? data.b : [];
+  var h = Array.isArray(data && data.h) ? data.h : [];
+  return {
+    b: b.filter(function(n){ return typeof n === 'number' && n >= 0 && n < nb; }),
+    h: h.filter(function(x){
+         return x && typeof x.b === 'number' && typeof x.s === 'number' &&
+                typeof x.a === 'number' && typeof x.z === 'number' &&
+                x.z > x.a && DISP[x.b] && typeof DISP[x.b][x.s] === 'string' &&
+                x.z <= DISP[x.b][x.s].length;
+       }).map(function(x){
+         return { b:x.b, s:x.s, a:x.a, z:x.z, c:/^[ygpb]$/.test(x.c) ? x.c : 'y' };
+       })
+  };
+}
+function loadAll(){
+  var raw = null;
+  try { raw = window.localStorage.getItem(STORE); } catch (e) {}
+  var data = {};
+  if (raw) { try { data = JSON.parse(raw); } catch (e) { data = {}; } }
+  var clean = sanitize(data);
+  state.bookmarks = clean.b;
+  state.highlights = clean.h;
+}
+function saveAll(){
+  try { window.localStorage.setItem(STORE, JSON.stringify({ b:state.bookmarks, h:state.highlights })); }
+  catch (e) {}
+}
+function exportText(){
+  return JSON.stringify({ id:ARTICLE.id, b:state.bookmarks, h:state.highlights });
+}
+function importText(txt){
+  var data;
+  try { data = JSON.parse(txt); } catch (e) { return false; }
+  if (!data || (!Array.isArray(data.b) && !Array.isArray(data.h))) return false;
+  var clean = sanitize(data);
+  state.bookmarks = clean.b;
+  state.highlights = clean.h;
+  sortHighlights();
+  saveAll();
+  return true;
+}
+
+/* ---------------- render ---------------- */
+/* ---------------- highlighter ---------------- */
+function sortHighlights(){
+  state.highlights.sort(function(x, y){ return x.b - y.b || x.s - y.s || x.a - y.a; });
+}
+function hlFor(bi, si){
+  return state.highlights.filter(function(h){ return h.b === bi && h.s === si; })
+                         .sort(function(x, y){ return x.a - y.a; });
+}
+/* Cut the sentence at every highlight and italic boundary, then decide the
+   wrappers segment by segment. Doing it this way keeps overlapping bands legal:
+   no tag ever has to close across another tag's edge. Highlight bands are
+   snapped to word edges, so the dictionary's .w spans are never cut in half. */
+function segHtml(text, hs, its){
+  var cuts = [0, text.length];
+  hs.forEach(function(h){ cuts.push(h.a, h.z); });
+  its.forEach(function(r){ cuts.push(r[0], r[1]); });
+  cuts = cuts.filter(function(v){ return v >= 0 && v <= text.length; })
+             .sort(function(a, b){ return a - b; })
+             .filter(function(v, i, a){ return i === 0 || v !== a[i - 1]; });
+
+  var out = '';
+  for (var i = 0; i < cuts.length - 1; i++) {
+    var p = cuts[i], q = cuts[i + 1];
+    if (q <= p) continue;
+    var color = null;
+    for (var j = 0; j < hs.length; j++) if (hs[j].a <= p && hs[j].z >= q) { color = hs[j].c; break; }
+    var ital = false;
+    for (var k = 0; k < its.length; k++) if (its[k][0] <= p && its[k][1] >= q) { ital = true; break; }
+    var piece = bodyHtml(text.slice(p, q));
+    if (ital)  piece = '<em>' + piece + '</em>';
+    if (color) piece = '<mark class="hl ' + color + '">' + piece + '</mark>';
+    out += piece;
+  }
+  return out;
+}
+function sentSpan(bi, si, disp){
+  var hs = hlFor(bi, si);
+  var its = (ITAL[bi] && ITAL[bi][si]) || [];
+  var inner = (hs.length || its.length) ? segHtml(disp, hs, its) : bodyHtml(disp);
+  return '<span class="s" data-b="' + bi + '" data-s="' + si + '">' + inner + '</span>';
+}
+
+var LETTER = /[A-Za-zÀ-ɏ'’\-]/;
+function snapToWords(text, a, z){
+  while (a > 0 && LETTER.test(text.charAt(a - 1))) a--;
+  while (z < text.length && LETTER.test(text.charAt(z))) z++;
+  while (a < z && /\s/.test(text.charAt(a))) a++;
+  while (z > a && /\s/.test(text.charAt(z - 1))) z--;
+  return [a, z];
+}
+/* Turn the live DOM selection into per-sentence character ranges. */
+function captureRanges(){
+  var sel = window.getSelection ? window.getSelection() : null;
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) return [];
+  var range = sel.getRangeAt(0), out = [];
+  var spans = appEl.querySelectorAll('.s');
+  for (var i = 0; i < spans.length; i++) {
+    var sp = spans[i];
+    if (!range.intersectsNode(sp)) continue;
+    var bi = Number(sp.getAttribute('data-b')), si = Number(sp.getAttribute('data-s'));
+    var text = (DISP[bi] && DISP[bi][si]) || sp.textContent;
+    var a = 0, z = text.length, r;
+    if (sp.contains(range.startContainer)) {
+      r = document.createRange(); r.selectNodeContents(sp);
+      try { r.setEnd(range.startContainer, range.startOffset); a = r.toString().length; } catch (e) {}
+    }
+    if (sp.contains(range.endContainer)) {
+      r = document.createRange(); r.selectNodeContents(sp);
+      try { r.setEnd(range.endContainer, range.endOffset); z = r.toString().length; } catch (e) {}
+    }
+    a = Math.max(0, Math.min(a, text.length));
+    z = Math.max(0, Math.min(z, text.length));
+    if (z > a) out.push({ b:bi, s:si, a:a, z:z });
+  }
+  return out;
+}
+/* Clip anything already sitting under `r`; pass a colour to lay a new band down. */
+function applyBand(r, color){
+  var kept = [];
+  state.highlights.forEach(function(h){
+    if (h.b !== r.b || h.s !== r.s || h.z <= r.a || h.a >= r.z) { kept.push(h); return; }
+    if (h.a < r.a) kept.push({ b:h.b, s:h.s, a:h.a, z:r.a, c:h.c });
+    if (h.z > r.z) kept.push({ b:h.b, s:h.s, a:r.z, z:h.z, c:h.c });
+  });
+  if (color) kept.push({ b:r.b, s:r.s, a:r.a, z:r.z, c:color });
+  state.highlights = kept;
+}
+function highlightSelection(color){
+  var ranges = captureRanges();
+  if (!ranges.length) return;
+  ranges.forEach(function(r){
+    var text = (DISP[r.b] && DISP[r.b][r.s]) || '';
+    var sn = snapToWords(text, r.a, r.z);
+    if (sn[1] <= sn[0]) return;
+    applyBand({ b:r.b, s:r.s, a:sn[0], z:sn[1] }, color);
+  });
+  sortHighlights(); saveAll();
+  if (window.getSelection) window.getSelection().removeAllRanges();
+  hideSelbar(); renderArticle(); paintPanel();
+}
+function selectionHasHighlight(){
+  var ranges = captureRanges();
+  for (var i = 0; i < ranges.length; i++) {
+    var r = ranges[i];
+    for (var j = 0; j < state.highlights.length; j++) {
+      var h = state.highlights[j];
+      if (h.b === r.b && h.s === r.s && h.z > r.a && h.a < r.z) return true;
+    }
+  }
+  return false;
+}
+function renderArticle(){
+  var h = '<p class="kicker">' + esc(ARTICLE.kicker) + '</p><h1>' + esc(ARTICLE.title) + '</h1>';
+  ARTICLE.blocks.forEach(function(b, bi){
+    var inner;
+    if (b.t === 'pg') {
+      var verso = b.n && (Number(b.n) % 2 === 0);
+      inner = '<div class="pgbrk' + (b.h ? (verso ? ' verso' : '') : ' first') + '">' +
+              '<span class="rh">' + esc(b.h || '') + '</span>' +
+              '<span class="folio">' + esc(b.n || '') + '</span></div>';
+    }
+    else if (b.t === 'sec') {
+      inner = '<div class="secno">' + esc(b.x) + '</div>';
+    }
+    else if (b.t === 't') {
+      var hd = b.head || ['A','B'];
+      inner = '<table class="ab"><thead><tr><th>' + esc(hd[0]) + '</th><th>' + esc(hd[1]) +
+        '</th></tr></thead><tbody>' + b.rows.map(function(r, ri){
+          return '<tr><td>' + sentSpan(bi, ri*2, r[0]) + '</td><td>' + sentSpan(bi, ri*2+1, r[1]) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    } else {
+      var ins = DISP[bi].map(function(s, si){ return sentSpan(bi, si, s); }).join(' ');
+      if (b.t === 'p')      inner = '<p class="para">' + ins + '</p>';
+      else if (b.t === 'q') inner = '<blockquote class="quote">' + ins + '</blockquote>';
+      else if (b.t === 'epi') inner = '<div class="epi">' + ins +
+        (b.c ? '<span class="cite">' + esc(b.c) + '</span>' : '') + '</div>';
+      else if (b.t === 'fn') inner = '<div class="fnote"><span class="mk">' +
+        esc(b.m || '*') + '</span><span class="bd">' + ins + '</span></div>';
+      else                  inner = '<div class="note" data-label="' + esc(UI.noteLabel) + '">' + ins + '</div>';
+    }
+    h += '<div class="blk" data-b="' + bi + '">' + inner + '</div>';
+  });
+  appEl.innerHTML = h;
+  paintHighlight();
+}
+function paintHighlight(){
+  var prev = appEl.querySelectorAll('.s.reading');
+  for (var i = 0; i < prev.length; i++) prev[i].classList.remove('reading');
+  if (state.mode !== 'article' || state.unit < 0 || state.unit >= UNITS.length) return;
+  var u = UNITS[state.unit];
+  for (var si = u.s0; si <= u.s1; si++) {
+    var el = appEl.querySelector('.s[data-b="' + u.b + '"][data-s="' + si + '"]');
+    if (el) el.classList.add('reading');
+  }
+}
+var ICON_PLAY  = '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>';
+var ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+
+function paintPlayer(){
+  playEl.innerHTML = state.playing ? ICON_PAUSE : ICON_PLAY;
+  playEl.title = state.playing ? UI.pause : UI.play;
+  metaEl.classList.toggle('err', state.status === 'error');
+  var pos = state.unit >= 0 ? (state.unit + 1) + ' / ' + UNITS.length : '— / ' + UNITS.length;
+  var where = state.mode === 'sel' ? UI.selection : pos;
+  if (state.status === 'loading')      metaEl.innerHTML = '<span class="spin"></span>' + esc(UI.synthesizing) + ' · <b>' + esc(where) + '</b>';
+  else if (state.status === 'error')   metaEl.textContent = state.message;
+  else if (state.status === 'playing') metaEl.innerHTML = esc(UI.narrating) + ' · <b>' + esc(where) + '</b>';
+  else if (state.status === 'paused')  metaEl.innerHTML = esc(UI.paused) + ' · <b>' + esc(where) + '</b>';
+  else                                 metaEl.innerHTML = esc(VOICE) + ' — ' + esc(UI.ready) + ' · <b>' + esc(pos) + '</b>';
+}
+function paintPanel(){
+  panelEl.classList.toggle('open', state.panelOpen);
+  if (!state.panelOpen) return;
+  var h = '<button class="padd" data-action="bm-add">' + esc(UI.addBookmark) + '</button>';
+  if (!STORAGE_OK) h += '<div class="pwarn">' + esc(UI.storageWarn) + '</div>';
+
+  h += '<div class="phead">' + esc(UI.hdgBookmarks) + '</div>';
+  h += state.bookmarks.length
+    ? state.bookmarks.map(function(bi){
+        return '<div class="prow" data-action="bm-go" data-i="' + bi + '">' +
+               '<span class="n">' + (bi + 1) + '</span>' +
+               '<span class="t">' + esc(blockText(bi).slice(0, 110)) + '…</span>' +
+               '<span class="x" data-action="bm-del" data-i="' + bi + '">×</span></div>';
+      }).join('')
+    : '<div class="pempty">' + esc(UI.noBookmarks) + '</div>';
+
+  h += '<div class="phead">' + esc(UI.hdgHighlights) + '</div>';
+  h += state.highlights.length
+    ? state.highlights.map(function(x, i){
+        var t = ((DISP[x.b] && DISP[x.b][x.s]) || '').slice(x.a, x.z);
+        return '<div class="prow" data-action="hl-go" data-i="' + i + '">' +
+               '<span class="sw ' + x.c + '"></span>' +
+               '<span class="t">' + esc(t.slice(0, 110)) + '</span>' +
+               '<span class="x" data-action="hl-del" data-i="' + i + '">×</span></div>';
+      }).join('')
+    : '<div class="pempty">' + esc(UI.noHighlights) + '</div>';
+
+  var src = keySource();
+  var srcText = src === 'code' ? UI.keySrcCode : src === 'tab' ? UI.keySrcTab :
+                src === 'canvas' ? UI.keySrcCanvas : (KEY_MODE === 'code' ? UI.keyMissingCode : UI.keySrcNone);
+  h += '<div class="phead">' + esc(UI.hdgKey) + '</div><div class="pkey"><span class="t">' + esc(srcText) + '</span>';
+  if (canAsk() && src !== 'code') h += '<button data-action="key-open">' + esc(tabKey ? UI.keyChange : UI.keyEnter) + '</button>';
+  if (tabKey)   h += '<button data-action="key-forget">' + esc(UI.keyForget) + '</button>';
+  h += '</div>';
+
+  h += '<button class="pbak" data-action="bak">' + esc(UI.backup) + '</button>' +
+       '<div id="bak" class="' + (state.bakOpen ? 'open' : '') + '">' +
+       '<div class="pwarn" style="background:transparent;color:var(--ink-faint);padding:8px 2px;">' +
+       esc(UI.backupHint) + '</div>' +
+       '<textarea id="bakBox" spellcheck="false">' + esc(exportText()) + '</textarea>' +
+       '<div class="brow"><button data-action="bak-copy">' + esc(UI.copy) + '</button>' +
+       '<button data-action="bak-restore">' + esc(UI.restore) + '</button></div></div>';
+
+  panelEl.innerHTML = h;
+}
+
+/* ---------------- API key ---------------- */
+/* tabKey is a key typed into the page. It is held in this variable only —
+   never written to storage — so it disappears with the tab. */
+var tabKey = '';
+var keyWait = null;   /* {promise, resolve, reject} while requests wait on the key box */
+var OFF_CANVAS = location.protocol === 'file:' || /(^|\.)github\.io$/i.test(location.hostname);
+
+function canAsk(){ return KEY_MODE === 'auto' || KEY_MODE === 'prompt'; }
+function keySource(){
+  if (KEY_MODE === 'canvas') return 'canvas';
+  if (KEY_MODE === 'code')   return API_KEY ? 'code' : 'none';
+  if (KEY_MODE === 'prompt') return tabKey ? 'tab' : 'none';
+  if (API_KEY) return 'code';
+  if (tabKey)  return 'tab';
+  return OFF_CANVAS ? 'none' : 'canvas';
+}
+function activeKey(){
+  var src = keySource();
+  return src === 'code' ? API_KEY : src === 'tab' ? tabKey : '';
+}
+/* Skip a request that is bound to fail: no key, and either the mode always
+   asks or the page is plainly not running inside Canvas. */
+function mustAskFirst(){
+  return canAsk() && !activeKey() && (KEY_MODE === 'prompt' || OFF_CANVAS);
+}
+
+function openKeyBox(msg){
+  keyErrEl.textContent = msg || '';
+  keyInEl.value = '';
+  keyBoxEl.classList.add('open');
+  setTimeout(function(){ keyInEl.focus(); }, 30);
+}
+function closeKeyBox(){ keyBoxEl.classList.remove('open'); keyInEl.value = ''; }
+/* Every request that needs a key waits on the same box, so a prefetch and a
+   click arriving together still show it once. */
+function askKey(msg){
+  if (!keyWait) {
+    var w = {};
+    w.promise = new Promise(function(res, rej){ w.resolve = res; w.reject = rej; });
+    keyWait = w;
+  }
+  openKeyBox(msg);
+  return keyWait.promise;
+}
+function submitKey(){
+  var v = keyInEl.value.replace(/\s+/g, '');
+  if (!v) { keyErrEl.textContent = UI.keyEmpty; return; }
+  tabKey = v; MODEL_OK = {};
+  closeKeyBox(); paintPanel(); paintPlayer();
+  if (keyWait) { var w = keyWait; keyWait = null; w.resolve(); }
+}
+function cancelKey(){
+  closeKeyBox();
+  if (keyWait) { var w = keyWait; keyWait = null; w.reject(new Error(UI.keyNeeded)); }
+}
+function forgetKey(){ tabKey = ''; MODEL_OK = {}; paintPanel(); }
+
+/* ---------------- API ---------------- */
+/* With a key: sent in the x-goog-api-key header, so it never sits in a URL.
+   Without one: the original "?key=" form, which Gemini Canvas fills in. */
+function callApi(model, payload){
+  var key = activeKey(), tries = 0;
+  var url = API_ROOT + model + ':generateContent' + (key ? '' : '?key=');
+  var headers = { 'Content-Type':'application/json' };
+  if (key) headers['x-goog-api-key'] = key;
+  function attempt(){
+    tries++;
+    return fetch(url, { method:'POST', headers:headers, body:JSON.stringify(payload) })
+      .catch(function(e){
+        throw new Error('Network blocked (' + (e && e.message ? e.message : 'fetch failed') +
+          '). Run this inside Gemini Canvas, or give the page an API key.');
+      })
+      .then(function(res){
+        if ((res.status === 429 || res.status >= 500) && tries < 4) {
+          return new Promise(function(r){ setTimeout(r, Math.pow(2, tries) * 400); }).then(attempt);
+        }
+        if (!res.ok) return res.text().then(function(t){
+          var msg = t;
+          try { var j = JSON.parse(t); if (j && j.error && j.error.message) msg = j.error.message; } catch (e) {}
+          throw new Error('API ' + res.status + (msg ? ' · ' + String(msg).slice(0, 140) : ''));
+        });
+        return res.json();
+      });
+  }
+  return attempt();
+}
+
+/* Walk a role's candidate list until one model answers. Only a "this model is
+   gone" style refusal advances the list — a genuine payload error still throws,
+   so a real bug is never hidden behind a retry.
+   Key handling: a keyless refusal ("unregistered callers") also advances,
+   because Canvas may cover only some models; once every candidate has refused,
+   the page asks for a key (auto / prompt) and retries. */
+var MODEL_OK = {};
+var DEAD_RE   = /API 404|no longer available|not found|is not supported|NOT_FOUND/i;
+var NOKEY_RE  = /unregistered callers|established identity/i;
+var BADKEY_RE = /API key not valid|API_KEY_INVALID|API key expired/i;
+function callModel(role, candidates, payload){
+  function again(){ return callModel(role, candidates, payload); }
+  if (KEY_MODE === 'code' && !API_KEY) return Promise.reject(new Error(UI.keyMissingCode));
+  if (mustAskFirst()) return askKey('').then(again);
+  var list = MODEL_OK[role] ? [MODEL_OK[role]] : candidates.slice();
+  var i = 0;
+  function tryNext(){
+    var model = list[i];
+    /* payload may be a function of the model, for roles whose request shape
+       differs between model generations (TTS). */
+    return callApi(model, typeof payload === 'function' ? payload(model) : payload).then(function(json){
+      MODEL_OK[role] = model;
+      return json;
+    }).catch(function(err){
+      var msg = String(err && err.message);
+      var noKey = !activeKey() && NOKEY_RE.test(msg);
+      if (i < list.length - 1 && (DEAD_RE.test(msg) || noKey)) { i++; return tryNext(); }
+      if (noKey) {
+        if (canAsk()) return askKey('').then(again);
+        throw new Error(KEY_MODE === 'code' ? UI.keyMissingCode : UI.keyNeeded);
+      }
+      if (BADKEY_RE.test(msg)) {
+        if (keySource() === 'tab') { tabKey = ''; paintPanel(); return askKey(UI.keyBad).then(again); }
+        if (keySource() === 'code') throw new Error(UI.keyBadCode);
+      }
+      throw err;
+    });
+  }
+  return tryNext();
+}
+
+/* Collins COBUILD-style lookup.
+   Two layers, always: ① the general dictionary entry, ② what it means right here.
+   The cache key carries the context, because the same word in a different
+   paragraph must not reuse the earlier contextual reading. */
+function explain(target, context){
+  var key = target.toLowerCase().trim() + '‖' + context.slice(0, 120);
+  if (explainCache.has(key)) return explainCache.get(key);
+
+  var prompt =
+    'You are a lexicographer writing in the style of the Collins COBUILD English Dictionary,\n' +
+    'helping an intermediate learner read a demanding text.\n\n' +
+    'HOUSE STYLE — follow all of it:\n' +
+    '• Definitions are FULL SENTENCES that show the word in its own grammar, never bare synonyms.\n' +
+    '    verb   → "If you abandon a place or person, you leave them permanently."\n' +
+    '    noun   → "A vine is a plant that grows up or over things."\n' +
+    '    adj    → "If something is fragile, it is easily broken or damaged."\n' +
+    '• Keep the wording within the ordinary defining vocabulary — plain, common words only (CEFR A2-B1).\n' +
+    '• Write in English only. No other language anywhere in the output.\n\n' +
+    'SELECTED TEXT:\n"""' + target.slice(0, 1200) + '"""\n\n' +
+    (context ? 'THE PASSAGE IT APPEARS IN:\n"""' + context.slice(0, 1400) + '"""\n\n'
+             : 'No surrounding passage was given.\n\n') +
+    'Return these fields:\n' +
+    'type       — word | phrase | clause | sentence.\n' +
+    'headword   — For a word or short phrase, the dictionary base form (grows→grow, keepers→keeper).\n' +
+    '             Leave empty for a clause or sentence.\n' +
+    'inflection — How the selected form relates to the headword ("3rd person singular", "plural",\n' +
+    '             "past participle"). Empty if the selection is already the base form, or not a word.\n' +
+    'frequency  — Collins-style band, 5 = among the most common English words, 1 = rare,\n' +
+    '             0 = not applicable (clause or sentence). Integer.\n' +
+    'grammar    — Collins pattern tag for how it is used HERE: "[VERB noun]", "[usually PASSIVE]",\n' +
+    '             "[ADJ noun]", "[V n prep]". Empty if not applicable.\n' +
+    'register   — Tone or usage label only if one genuinely applies: formal, informal, literary,\n' +
+    '             technical, old-fashioned, disapproval, emphasis. Otherwise empty.\n' +
+    'general    — For a word or phrase: the full-sentence COBUILD definition of the sense used here.\n' +
+    '             For a clause or sentence: a plain-English paraphrase of the whole thing.\n' +
+    '             Max 35 words.\n' +
+    'example    — One natural sentence of your own showing typical everyday usage, in the style of a\n' +
+    '             corpus citation. It must NOT be copied from the passage above. Empty for a sentence.\n' +
+    'contextual — What it actually means in THIS passage: the specific sense, what it refers back to,\n' +
+    '             and the writer\'s point in using it. Max 35 words.';
+
+  var p = callModel('text', TEXT_MODELS, {
+    contents:[{ parts:[{ text: prompt }] }],
+    generationConfig:{
+      temperature:0.2,
+      responseMimeType:'application/json',
+      responseSchema:{
+        type:'OBJECT',
+        properties:{
+          type:{type:'STRING'}, headword:{type:'STRING'}, inflection:{type:'STRING'},
+          frequency:{type:'INTEGER'}, grammar:{type:'STRING'}, register:{type:'STRING'},
+          general:{type:'STRING'}, example:{type:'STRING'}, contextual:{type:'STRING'}
+        },
+        required:['type','headword','inflection','frequency','grammar','register','general','example','contextual']
+      }
+    }
+  }).then(function(json){
+    var raw = '';
+    try { raw = json.candidates[0].content.parts[0].text; } catch (e) { raw = ''; }
+    if (!raw) throw new Error('Empty response');
+    var d = JSON.parse(raw);
+    var f = parseInt(d.frequency, 10);
+    return {
+      type:       d.type       || '',
+      headword:   d.headword   || '',
+      inflection: d.inflection || '',
+      frequency:  (isNaN(f) || f < 0) ? 0 : Math.min(f, 5),
+      grammar:    d.grammar    || '',
+      register:   d.register   || '',
+      general:    d.general    || '',
+      example:    d.example    || '',
+      contextual: d.contextual || ''
+    };
+  }).catch(function(err){ explainCache.delete(key); throw err; });
+
+  explainCache.set(key, p);
+  return p;
+}
+
+function b64ToBytes(b64){
+  var bin = atob(b64), n = bin.length, out = new Uint8Array(n);
+  for (var i = 0; i < n; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function pcmToWav(pcm, rate){
+  var len = pcm.length, buf = new ArrayBuffer(44 + len), v = new DataView(buf);
+  function s(o, str){ for (var i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); }
+  s(0,'RIFF');  v.setUint32(4, 36 + len, true);  s(8,'WAVE');
+  s(12,'fmt '); v.setUint32(16, 16, true);       v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);                      v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);               v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);                     s(36,'data');
+  v.setUint32(40, len, true);
+  new Uint8Array(buf, 44).set(pcm);
+  return new Blob([buf], { type:'audio/wav' });
+}
+function fetchAudio(text){
+  var key = state.ttsModel + '|' + text;
+  if (audioCache.has(key)) return audioCache.get(key);
+  var p = callModel('tts-' + state.ttsModel, TTS_MODELS[state.ttsModel], function(model){
+    var legacy = /preview/.test(model);
+    return {
+      contents:[{ parts:[ legacy ? { text: TTS_STYLE_LEGACY + text }
+                                 : { text: text, speech_metadata:{ style: TTS_STYLE } } ] }],
+      generationConfig:{
+        responseModalities:['AUDIO'],
+        speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName: VOICE } } }
+      }
+    };
+  }).then(function(json){
+    var part;
+    try { part = json.candidates[0].content.parts[0].inlineData; } catch (e) { part = null; }
+    if (!part || !part.data) throw new Error('No audio returned');
+    /* 3.8+ returns a complete WAV (RIFF header); older models return raw PCM. */
+    var bytes = b64ToBytes(part.data);
+    var isWav = /wav/i.test(part.mimeType || '') ||
+                (bytes.length > 4 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46);
+    var rm = /rate=(\d+)/.exec(part.mimeType || '');
+    var blob = isWav ? new Blob([bytes], { type:'audio/wav' })
+                     : pcmToWav(bytes, rm ? parseInt(rm[1], 10) : 24000);
+    return URL.createObjectURL(blob);
+  }).catch(function(err){ audioCache.delete(key); throw err; });
+  audioCache.set(key, p);
+  return p;
+}
+
+/* ---------------- playback ---------------- */
+function scrollToUnit(u){
+  var el = appEl.querySelector('.s[data-b="' + u.b + '"][data-s="' + u.s0 + '"]');
+  if (!el) return;
+  var r = el.getBoundingClientRect();
+  if (r.top < 130 || r.bottom > window.innerHeight - 40) {
+    window.scrollTo({ top: window.scrollY + r.top - 180, behavior:'smooth' });
+  }
+}
+function fail(err){
+  state.status = 'error'; state.playing = false;
+  state.message = String(err && err.message ? err.message : err).slice(0, 90);
+  paintPlayer();
+}
+function playUnit(i){
+  if (i < 0) i = 0;
+  if (i >= UNITS.length) { audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer(); return; }
+  state.mode = 'article'; state.unit = i; state.status = 'loading'; state.playing = true;
+  paintPlayer(); paintHighlight();
+  fetchAudio(UNITS[i].text).then(function(url){
+    if (state.unit !== i || state.mode !== 'article' || !state.playing) return;
+    audioEl.src = url;
+    return audioEl.play().then(function(){
+      state.status = 'playing'; paintPlayer(); scrollToUnit(UNITS[i]);
+      if (i + 1 < UNITS.length) fetchAudio(UNITS[i + 1].text).catch(function(){});
+    });
+  }).catch(fail);
+}
+function speak(text){
+  text = cleanTts(text).slice(0, SEL_MAX);
+  if (!text) return;
+  audioEl.pause();
+  state.mode = 'sel'; state.playing = true; state.status = 'loading';
+  paintPlayer(); paintHighlight();
+  fetchAudio(text).then(function(url){
+    if (state.mode !== 'sel' || !state.playing) return;
+    audioEl.src = url;
+    return audioEl.play().then(function(){ state.status = 'playing'; paintPlayer(); });
+  }).catch(fail);
+}
+function togglePlay(){
+  if (state.playing) { audioEl.pause(); state.playing = false; state.status = 'paused'; paintPlayer(); return; }
+  if (audioEl.src && audioEl.currentTime > 0 && !audioEl.ended) {
+    state.playing = true;
+    audioEl.play().then(function(){ state.status = 'playing'; paintPlayer(); })
+                  .catch(function(){ state.playing = false; state.status = 'ready'; paintPlayer(); });
+    return;
+  }
+  playUnit(state.unit < 0 ? 0 : state.unit);
+}
+audioEl.addEventListener('ended', function(){
+  if (!state.playing) return;
+  if (state.mode === 'sel') { state.playing = false; state.mode = 'article'; state.status = 'ready'; paintPlayer(); paintHighlight(); }
+  else playUnit(state.unit + 1);
+});
+
+/* ---------------- popovers ---------------- */
+function place(el, rect){
+  el.style.left = '0px'; el.style.top = '0px';
+  var w = el.offsetWidth, h = el.offsetHeight;
+  var left = Math.min(Math.max(8, rect.left + rect.width / 2 - w / 2), window.innerWidth - w - 8);
+  var top  = rect.top - h - 12;
+  if (top < 112) top = rect.bottom + 12;
+  if (top + h > window.innerHeight - 8) top = Math.max(112, window.innerHeight - h - 8);
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+}
+function hideSelbar(){ selbar.classList.remove('open'); }
+function hideTip(){
+  tipEl.classList.remove('open'); state.tip = null;
+  if (activeWord) { activeWord.classList.remove('on'); activeWord = null; }
+}
+function findBlockOf(term){
+  var t = term.toLowerCase();
+  for (var i = 0; i < ARTICLE.blocks.length; i++) {
+    if (blockText(i).toLowerCase().indexOf(t) > -1) return i;
+  }
+  return -1;
+}
+function actsHtml(hasFind){
+  return '<div class="acts"><button data-action="tip-play">' + esc(UI.listen) + '</button>' +
+    (hasFind ? '<button data-action="tip-find">' + esc(UI.findInText) + '</button>' : '') + '</div>';
+}
+function freqHtml(n){
+  if (!n) return '';
+  var out = '<span class="freq" title="' + esc(UI.freqLabel) + '">';
+  for (var i = 1; i <= 5; i++) out += '<i' + (i <= n ? ' class="on"' : '') + '></i>';
+  return out + '</span>';
+}
+
+/* headword → inflection → tags → ① dictionary meaning (+ usage example)
+   → ② meaning in this passage → actions */
+function entryHtml(head, d, hasFind){
+  var isLong = d.type === 'clause' || d.type === 'sentence';
+  var title  = (!isLong && d.headword) ? d.headword : head;
+
+  var tags = '';
+  if (d.type)     tags += '<span class="chip">' + esc(d.type) + '</span>';
+  if (d.grammar)  tags += '<span class="chip gram">' + esc(d.grammar) + '</span>';
+  if (d.register) tags += '<span class="chip reg">' + esc(d.register) + '</span>';
+  tags += freqHtml(d.frequency);
+
+  var h = '<div class="hw">' + esc(title) + '</div>';
+  if (!isLong && d.headword && d.headword.toLowerCase() !== head.toLowerCase()) {
+    h += '<div class="infl">' + esc(head) + (d.inflection ? ' · ' + esc(d.inflection) : '') + '</div>';
+  } else if (d.inflection) {
+    h += '<div class="infl">' + esc(d.inflection) + '</div>';
+  }
+  if (tags) h += '<div class="tags">' + tags + '</div>';
+
+  if (d.general) {
+    h += '<div class="sec first"><div class="lbl">' +
+         esc(isLong ? UI.dictParaphrase : UI.dictGeneral) + '</div>' +
+         '<div class="en">' + esc(d.general) + '</div>' +
+         (d.example ? '<div class="ex">' + esc(d.example) + '</div>' : '') + '</div>';
+  }
+  if (d.contextual) {
+    h += '<div class="sec' + (d.general ? '' : ' first') + '"><div class="lbl">' +
+         esc(UI.dictContextual) + '</div><div class="why">' + esc(d.contextual) + '</div></div>';
+  }
+  return h + actsHtml(hasFind);
+}
+
+function showTip(target, context, rect, anchorEl){
+  if (activeWord && activeWord !== anchorEl) activeWord.classList.remove('on');
+  activeWord = anchorEl || null;
+  if (activeWord) activeWord.classList.add('on');
+
+  var hit = findBlockOf(target);
+  state.tip = { text:target, block:hit, rect:rect };
+  anchorY = window.scrollY;
+
+  var head = target.length > 90 ? target.slice(0, 90) + '…' : target;
+  tipEl.classList.add('open');
+  tipEl.innerHTML = '<div class="hw">' + esc(head) + '</div><div class="load">' + esc(UI.explaining) + '</div>';
+  place(tipEl, rect);
+
+  /* Prefer the block the reader actually touched. `hit` is only the FIRST
+     occurrence in the text, so it is a fallback for search-box lookups. */
+  var ctx = context || (hit > -1 ? blockText(hit) : '');
+
+  explain(target, ctx).then(function(d){
+    if (!tipEl.classList.contains('open') || !state.tip || state.tip.text !== target) return;
+    tipEl.innerHTML = entryHtml(head, d, hit > -1);
+    place(tipEl, rect);
+  }).catch(function(err){
+    if (!tipEl.classList.contains('open') || !state.tip || state.tip.text !== target) return;
+    tipEl.innerHTML = '<div class="hw">' + esc(head) + '</div><div class="err">' +
+      esc(String(err.message || err).slice(0, 140)) + '</div>' + actsHtml(hit > -1);
+    place(tipEl, rect);
+  });
+}
+function flashFind(bi, term){
+  var t = term.toLowerCase(), target = null;
+  var spans = appEl.querySelectorAll('.s[data-b="' + bi + '"]');
+  for (var i = 0; i < spans.length; i++) {
+    if (spans[i].textContent.toLowerCase().indexOf(t) > -1) { target = spans[i]; break; }
+  }
+  if (!target) target = spans[0];
+  if (!target) return;
+  window.scrollTo({ top: window.scrollY + target.getBoundingClientRect().top - 170, behavior:'smooth' });
+  clearTimeout(foundTimer);
+  var old = appEl.querySelectorAll('.s.found');
+  for (var j = 0; j < old.length; j++) old[j].classList.remove('found');
+  target.classList.add('found');
+  foundTimer = setTimeout(function(){ target.classList.remove('found'); }, 2200);
+}
+function evalSelection(){
+  var sel = window.getSelection ? window.getSelection() : null;
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) { hideSelbar(); return; }
+  var text = sel.toString().replace(/\s+/g, ' ').trim();
+  if (!text) { hideSelbar(); return; }
+  var node = sel.anchorNode, el = node ? (node.nodeType === 1 ? node : node.parentElement) : null;
+  if (!el || !appEl.contains(el)) { hideSelbar(); return; }
+  var blk = el.closest ? el.closest('.blk') : null;
+  state.sel = { text:text, ctx: blk ? blockText(Number(blk.getAttribute('data-b'))) : '' };
+  hideTip();
+  anchorY = window.scrollY;
+  document.getElementById('selErase').style.display = selectionHasHighlight() ? '' : 'none';
+  selbar.classList.add('open');
+  place(selbar, sel.getRangeAt(0).getBoundingClientRect());
+}
+
+/* ---------------- bookmarks ---------------- */
+function topVisibleBlock(){
+  var els = appEl.querySelectorAll('.blk');
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].getBoundingClientRect().bottom > 140) return Number(els[i].getAttribute('data-b'));
+  }
+  return 0;
+}
+function addBookmark(){
+  var bi = (state.mode === 'article' && state.playing && state.unit >= 0) ? UNITS[state.unit].b : topVisibleBlock();
+  if (state.bookmarks.indexOf(bi) === -1) {
+    state.bookmarks.push(bi);
+    state.bookmarks.sort(function(a, b){ return a - b; });
+    saveAll();
+  }
+  paintPanel();
+}
+function jumpToBlock(bi){
+  var el = appEl.querySelector('.blk[data-b="' + bi + '"]');
+  if (el) window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - 140, behavior:'smooth' });
+}
+
+/* ---------------- events (delegated once) ---------------- */
+selbar.addEventListener('mousedown', function(ev){ ev.preventDefault(); }, false);
+tipEl.addEventListener('mousedown', function(ev){ ev.preventDefault(); }, false);
+
+document.getElementById('searchForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var term = (qEl.value || '').replace(/\s+/g, ' ').trim();
+  if (!term) return;
+  hideSelbar(); qEl.blur();
+  showTip(term, '', qEl.getBoundingClientRect(), null);
+}, false);
+
+document.getElementById('keyForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  submitKey();
+}, false);
+
+document.addEventListener('click', function(ev){
+  var t = ev.target, act = t.closest ? t.closest('[data-action]') : null;
+
+  if (!act) {
+    var w = t.closest ? t.closest('.w') : null;
+    if (w && state.dict && appEl.contains(w)) {
+      var blk = w.closest('.blk');
+      showTip(w.getAttribute('data-w'), blk ? blockText(Number(blk.getAttribute('data-b'))) : '',
+              w.getBoundingClientRect(), w);
+      return;
+    }
+    if (!tipEl.contains(t)) hideTip();
+    if (!panelEl.contains(t)) { state.panelOpen = false; paintPanel(); }
+    return;
+  }
+
+  var a = act.getAttribute('data-action');
+  if (a === 'dict') {
+    state.dict = !state.dict;
+    dictEl.setAttribute('aria-pressed', state.dict ? 'true' : 'false');
+    document.body.classList.toggle('dict', state.dict);
+    hideTip(); renderArticle();
+  }
+  else if (a === 'panel')  { state.panelOpen = !state.panelOpen; paintPanel(); }
+  else if (a === 'key-open')   { state.panelOpen = false; paintPanel(); openKeyBox(''); }
+  else if (a === 'key-forget') { forgetKey(); }
+  else if (a === 'key-cancel') { cancelKey(); }
+  else if (a === 'bm-add') { addBookmark(); }
+  else if (a === 'bm-del') {
+    ev.stopPropagation();
+    var di = Number(act.getAttribute('data-i'));
+    state.bookmarks = state.bookmarks.filter(function(x){ return x !== di; });
+    saveAll(); paintPanel();
+  }
+  else if (a === 'bm-go') {
+    jumpToBlock(Number(act.getAttribute('data-i')));
+    state.panelOpen = false; paintPanel();
+  }
+  else if (a === 'hl')       { highlightSelection(act.getAttribute('data-c')); }
+  else if (a === 'hl-erase') { highlightSelection(null); }
+  else if (a === 'hl-del') {
+    ev.stopPropagation();
+    state.highlights.splice(Number(act.getAttribute('data-i')), 1);
+    saveAll(); renderArticle(); paintPanel();
+  }
+  else if (a === 'hl-go') {
+    var hx = state.highlights[Number(act.getAttribute('data-i'))];
+    if (hx) { state.panelOpen = false; paintPanel(); jumpToBlock(hx.b); }
+  }
+  else if (a === 'bak')      { state.bakOpen = !state.bakOpen; paintPanel(); }
+  else if (a === 'bak-copy') {
+    var box = document.getElementById('bakBox');
+    box.value = exportText(); box.select(); box.setSelectionRange(0, box.value.length);
+    var done = function(){ act.textContent = UI.copied; setTimeout(function(){ act.textContent = UI.copy; }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(box.value).then(done, function(){ try { document.execCommand('copy'); done(); } catch (e) {} });
+    } else { try { document.execCommand('copy'); done(); } catch (e) {} }
+  }
+  else if (a === 'bak-restore') {
+    var ok = importText(document.getElementById('bakBox').value);
+    act.textContent = ok ? UI.restored : UI.badBackup;
+    if (ok) { renderArticle(); state.bakOpen = true; setTimeout(paintPanel, 900); }
+    else setTimeout(function(){ act.textContent = UI.restore; }, 2000);
+  }
+  else if (a === 'play') togglePlay();
+  else if (a === 'prev') playUnit(state.unit <= 0 ? 0 : state.unit - 1);
+  else if (a === 'next') playUnit(state.unit + 1);
+  else if (a === 'sel-explain') {
+    if (!state.sel) return;
+    var r = selbar.getBoundingClientRect(); hideSelbar();
+    showTip(state.sel.text, state.sel.ctx, r, null);
+  }
+  else if (a === 'sel-play')  { hideSelbar(); if (state.sel) speak(state.sel.text); }
+  else if (a === 'tip-play')  { if (state.tip) speak(state.tip.text); }
+  else if (a === 'tip-find')  {
+    if (state.tip && state.tip.block > -1) { var tt = state.tip; hideTip(); flashFind(tt.block, tt.text); }
+  }
+}, false);
+
+document.addEventListener('change', function(ev){
+  var act = ev.target.closest ? ev.target.closest('[data-action]') : null;
+  if (!act) return;
+  var a = act.getAttribute('data-action');
+  if (a === 'model') {
+    state.ttsModel = act.value;
+    audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer();
+  } else if (a === 'gran') {
+    var at = (state.unit >= 0 && UNITS[state.unit]) ? UNITS[state.unit].b : -1;
+    state.gran = act.value;
+    audioEl.pause(); state.playing = false; state.status = 'ready';
+    buildUnits(); state.unit = -1;
+    if (at >= 0) for (var i = 0; i < UNITS.length; i++) if (UNITS[i].b === at) { state.unit = i; break; }
+    paintPlayer(); paintHighlight();
+  }
+}, false);
+
+appEl.addEventListener('mouseover', function(ev){
+  if (!state.dict || !CAN_HOVER) return;
+  var el = ev.target.closest ? ev.target.closest('.w') : null;
+  if (!el) return;
+  clearTimeout(hoverTimer);
+  hoverTimer = setTimeout(function(){
+    var s = window.getSelection ? window.getSelection() : null;
+    if (s && !s.isCollapsed) return;
+    var blk = el.closest('.blk');
+    showTip(el.getAttribute('data-w'), blk ? blockText(Number(blk.getAttribute('data-b'))) : '',
+            el.getBoundingClientRect(), el);
+  }, 340);
+}, false);
+appEl.addEventListener('mouseout', function(){ clearTimeout(hoverTimer); }, false);
+
+document.addEventListener('selectionchange', function(){
+  clearTimeout(selTimer);
+  selTimer = setTimeout(evalSelection, 280);
+}, false);
+
+document.addEventListener('keydown', function(ev){
+  if (keyBoxEl.classList.contains('open')) {
+    if (ev.key === 'Escape') cancelKey();
+    return;
+  }
+  if (ev.target && ev.target.id === 'q') {
+    if (ev.key === 'Escape') { ev.target.value = ''; ev.target.blur(); hideTip(); }
+    return;
+  }
+  if (ev.key === 'Escape') { hideTip(); hideSelbar(); state.panelOpen = false; paintPanel(); }
+}, false);
+
+/* Popovers survive the small scroll a touch drag causes. */
+window.addEventListener('scroll', function(){
+  if (Math.abs(window.scrollY - anchorY) < SCROLL_TOL) return;
+  if (tipEl.classList.contains('open')) hideTip();
+  if (selbar.classList.contains('open')) hideSelbar();
+}, { passive:true });
+
+window.addEventListener('resize', function(){ hideTip(); hideSelbar(); }, { passive:true });
+
+/* ---------------- boot ---------------- */
+function applyStrings(){
+  document.title = ARTICLE.title;
+  document.getElementById('brand').textContent = ARTICLE.kicker + ' · ' + ARTICLE.title;
+  qEl.placeholder = UI.searchPlaceholder;
+  document.getElementById('qBtn').setAttribute('aria-label', UI.searchLabel);
+  dictEl.textContent = UI.dictionary;
+  dictEl.title = UI.dictionaryHint;
+  document.getElementById('bmBtn').setAttribute('aria-label', UI.bookmarks);
+  document.getElementById('bmBtn').title = UI.bookmarks;
+  document.querySelector('[data-action="prev"]').title = UI.prev;
+  document.querySelector('[data-action="next"]').title = UI.next;
+  document.getElementById('selExplain').textContent = UI.explain;
+  document.getElementById('selPlay').textContent = UI.listen;
+  document.getElementById('selErase').title = UI.eraseHighlight;
+  var dots = selbar.querySelectorAll('[data-action="hl"]');
+  for (var i = 0; i < dots.length; i++) dots[i].title = UI.highlight;
+  document.getElementById('voicetag').textContent = VOICE;
+  document.getElementById('ns').textContent = UI.noscript;
+  document.getElementById('keyTitle').textContent = UI.keyTitle;
+  document.getElementById('keyHint').textContent = UI.keyHint;
+  document.getElementById('keyCancel').textContent = UI.keyCancel;
+  document.getElementById('keyOk').textContent = UI.keyUse;
+  keyInEl.placeholder = UI.keyPlaceholder;
+  document.getElementById('granSel').innerHTML =
+    '<option value="sent">' + esc(UI.unitSentence) + '</option><option value="para">' + esc(UI.unitParagraph) + '</option>';
+  document.getElementById('modelSel').innerHTML =
+    '<option value="flash">' + esc(UI.modelFlash) + '</option><option value="pro">' + esc(UI.modelPro) + '</option>';
+}
+
+applyStrings();
+buildSents();          /* DISP must exist before saved marks are validated */
+buildUnits();
+STORAGE_OK = probeStorage();
+loadAll();
+sortHighlights();
+renderArticle();
+paintPlayer();
+paintPanel();
+
+})();
+</script>
+</body>
+</html>
