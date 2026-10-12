@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#fbfaf8;
+    --ink:#1c1b19;
+    --ink-soft:#6b6862;
+    --ink-faint:#9c9891;
+    --line:#e5e2dc;
+    --accent:#8a6f4e;
+    --accent-soft:#f0e9df;
+    --panel:#ffffff;
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --col:720px;
+    --read:19px;
+    --tap:32px;
+    --safe-l:env(safe-area-inset-left,0px);
+    --safe-r:env(safe-area-inset-right,0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;text-size-adjust:100%;
+    overscroll-behavior-y:none;
+  }
+  ::selection{background:#e7dcc9;}
+
+  /* ---------- header ---------- */
+  #topbar{
+    position:sticky;top:0;z-index:40;
+    background:rgba(251,250,248,.94);
+    backdrop-filter:saturate(180%) blur(12px);
+    -webkit-backdrop-filter:saturate(180%) blur(12px);
+    border-bottom:1px solid var(--line);
+    padding-left:var(--safe-l);padding-right:var(--safe-r);
+  }
+  .bar{max-width:var(--col);margin:0 auto;padding:0 24px;height:54px;display:flex;align-items:center;gap:10px;}
+  .brand{font-family:var(--sans);font-size:12px;letter-spacing:.04em;color:var(--ink-soft);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;}
+
+  .search{position:relative;display:flex;align-items:center;flex:0 0 auto;}
+  .search input{
+    font-family:var(--sans);font-size:12px;color:var(--ink);background:transparent;
+    border:1px solid var(--line);border-radius:999px;
+    padding:0 32px 0 13px;height:var(--tap);width:150px;outline:none;
+    -webkit-appearance:none;appearance:none;
+    transition:border-color .15s,width .2s,background .15s;
+  }
+  .search input:focus{border-color:var(--accent);width:210px;background:var(--panel);}
+  .search input::placeholder{color:var(--ink-faint);}
+  .search button{
+    position:absolute;right:3px;width:26px;height:26px;border:none;background:transparent;
+    color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;
+    border-radius:50%;padding:0;
+  }
+  .search button svg{width:14px;height:14px;fill:currentColor;}
+
+  .btn{
+    font-family:var(--sans);font-size:12px;line-height:1;color:var(--ink-soft);
+    background:transparent;border:1px solid var(--line);border-radius:999px;
+    height:var(--tap);padding:0 13px;cursor:pointer;white-space:nowrap;flex:0 0 auto;
+    display:inline-flex;align-items:center;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .btn:hover{border-color:var(--ink-faint);color:var(--ink);}
+  .btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent);}
+  .btn.icon{padding:0;width:var(--tap);justify-content:center;}
+  .btn.icon svg{width:15px;height:15px;fill:currentColor;}
+
+  /* ---------- player ---------- */
+  #player{max-width:var(--col);margin:0 auto;padding:0 24px 6px;display:flex;align-items:center;gap:7px;}
+  .pbtn{width:var(--tap);height:var(--tap);display:flex;align-items:center;justify-content:center;
+    border:none;background:transparent;color:var(--ink-soft);cursor:pointer;border-radius:50%;flex:0 0 auto;
+    transition:background .15s,color .15s;}
+  .pbtn:hover{background:var(--accent-soft);color:var(--accent);}
+  .pbtn svg{width:16px;height:16px;fill:currentColor;}
+  .pbtn.main svg{width:18px;height:18px;}
+  .pmeta{font-family:var(--sans);font-size:11.5px;letter-spacing:.02em;color:var(--ink-faint);
+    flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pmeta b{color:var(--ink-soft);font-weight:500;}
+  .pmeta.err{color:#a4443a;}
+  select.sel{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:999px;height:var(--tap);padding:0 8px;cursor:pointer;flex:0 0 auto;
+    -webkit-appearance:none;appearance:none;text-align:center;}
+  .voicetag{font-family:var(--sans);font-size:11px;letter-spacing:.06em;color:var(--accent);
+    background:var(--accent-soft);border-radius:999px;padding:6px 10px;white-space:nowrap;flex:0 0 auto;}
+  .spin{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;
+    border:1.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  /* ---------- bookmarks ---------- */
+  #panel{position:fixed;z-index:50;right:calc(16px + var(--safe-r));top:108px;
+    width:min(360px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;box-shadow:0 12px 40px rgba(28,27,25,.12);padding:8px;display:none;
+    max-height:62vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+  #panel.open{display:block;}
+  .prow{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:8px;cursor:pointer;}
+  .prow:hover{background:var(--accent-soft);}
+  .prow .n{font-family:var(--sans);font-size:10px;color:var(--accent);padding-top:3px;min-width:26px;}
+  .prow .t{font-size:14px;line-height:1.45;color:var(--ink-soft);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .prow .x{margin-left:auto;font-family:var(--sans);font-size:17px;color:var(--ink-faint);
+    padding:0 6px;line-height:1;}
+  .pempty{font-family:var(--sans);font-size:12.5px;color:var(--ink-faint);padding:16px 10px;text-align:center;}
+  .padd{width:100%;font-family:var(--sans);font-size:12.5px;color:var(--accent);background:var(--accent-soft);
+    border:none;border-radius:8px;padding:12px;cursor:pointer;margin-bottom:6px;}
+  .phead{font-family:var(--sans);font-size:9.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);padding:12px 12px 5px;}
+  .prow .sw{width:11px;height:11px;border-radius:3px;flex:0 0 auto;margin-top:4px;}
+  .prow .sw.y{background:#fbeeae;} .prow .sw.g{background:#d8ecd2;}
+  .prow .sw.p{background:#f8d9e6;} .prow .sw.b{background:#d5e6f5;}
+  .pwarn{font-family:var(--sans);font-size:11.5px;line-height:1.5;color:#8a6230;background:#faf1e2;
+    border-radius:8px;padding:10px 12px;margin:6px 0;}
+  .pbak{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;width:100%;margin-top:6px;}
+  #bak{display:none;padding:4px 2px 2px;}
+  #bak.open{display:block;}
+  #bak textarea{width:100%;height:88px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;line-height:1.45;color:var(--ink-soft);background:#f7f5f1;border:1px solid var(--line);
+    border-radius:8px;padding:9px;resize:vertical;outline:none;-webkit-appearance:none;}
+  #bak .brow{display:flex;gap:6px;margin-top:6px;}
+  #bak .brow button{flex:1 1 0;font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);
+    background:transparent;border:1px solid var(--line);border-radius:8px;padding:9px;cursor:pointer;}
+  #bak .brow button:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* ---------- article ---------- */
+  #app{max-width:var(--col);margin:0 auto;
+    padding:56px calc(24px + var(--safe-l)) 40vh calc(24px + var(--safe-r));}
+  .kicker{font-size:12px;font-family:var(--sans);color:var(--ink-faint);letter-spacing:.08em;
+    text-transform:uppercase;margin:0 0 10px;}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,5vw,42px);
+    line-height:1.18;letter-spacing:-.01em;margin:0 0 46px;}
+  p.para{font-size:var(--read);line-height:1.8;margin:0 0 26px;}
+  p.para em,.epi em,.note em,.fnote em,blockquote.quote em{font-style:italic;}
+
+  /* ---------- printed-page furniture ---------- */
+  .pgbrk{display:flex;align-items:baseline;gap:14px;margin:44px 0 30px;
+    border-top:1px solid var(--line);padding-top:9px;}
+  .pgbrk.verso{flex-direction:row-reverse;}
+  .pgbrk .rh{font-family:var(--sans);font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-faint);flex:1 1 auto;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pgbrk.verso .rh{text-align:right;}
+  .pgbrk .folio{font-family:var(--serif);font-size:13px;color:var(--accent);
+    flex:0 0 auto;font-variant-numeric:oldstyle-nums;}
+  .pgbrk.first{border-top:none;margin-top:0;padding-top:0;}
+  .pgbrk.first .rh{display:none;}
+
+  .epi{margin:0 auto 34px;padding:0 0 0 34px;max-width:88%;
+    font-size:calc(var(--read) - 2.5px);line-height:1.72;color:var(--ink-soft);}
+  .epi .cite{display:block;margin-top:10px;text-align:right;font-style:italic;
+    font-size:calc(var(--read) - 4px);color:var(--ink-faint);}
+
+  .secno{font-family:var(--serif);font-size:calc(var(--read) + 1px);text-align:center;
+    letter-spacing:.14em;color:var(--ink-soft);margin:38px 0 26px;}
+
+  .fnote{font-size:calc(var(--read) - 5px);line-height:1.62;color:var(--ink-soft);
+    margin:30px 0 26px;padding-top:11px;border-top:1px solid var(--line);
+    display:flex;gap:9px;align-items:flex-start;}
+  .fnote .mk{flex:0 0 auto;color:var(--accent);}
+  .fnote .bd{flex:1 1 auto;min-width:0;}
+  blockquote.quote{margin:0 0 26px;padding:2px 0 2px 22px;border-left:2px solid var(--line);
+    font-size:calc(var(--read) - 1.5px);line-height:1.74;color:var(--ink-soft);}
+  .note{font-size:calc(var(--read) - 4px);line-height:1.7;color:var(--ink-soft);margin:0 0 26px;
+    padding:18px 20px;background:#f5f3ef;border-radius:8px;}
+  .note::before{content:attr(data-label);display:block;font-family:var(--sans);font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px;}
+  table.ab{width:100%;border-collapse:collapse;margin:0 0 26px;
+    font-size:calc(var(--read) - 3px);line-height:1.62;}
+  table.ab th{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:500;text-align:left;padding:0 14px 8px 0;border-bottom:1px solid var(--line);}
+  table.ab td{padding:13px 14px 13px 0;border-bottom:1px solid var(--line);vertical-align:top;width:50%;}
+  table.ab tr:last-child td{border-bottom:none;}
+
+  /* ---------- reading units ---------- */
+  .s{border-radius:3px;transition:background .3s;}
+  .s.reading{background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft);}
+  .s.found{background:#e7dcc9;box-shadow:0 0 0 3px #e7dcc9;}
+  .w{cursor:default;}
+  body.dict .w{cursor:help;}
+  body.dict .w:hover,.w.on{background:#e7dcc9;border-radius:3px;box-shadow:0 0 0 2px #e7dcc9;}
+
+  /* ---------- highlighter ---------- */
+  mark.hl{background:transparent;color:inherit;border-radius:2px;
+    padding:.12em 0;box-decoration-break:clone;-webkit-box-decoration-break:clone;}
+  mark.hl.y{background:#fbeeae;}
+  mark.hl.g{background:#d8ecd2;}
+  mark.hl.p{background:#f8d9e6;}
+  mark.hl.b{background:#d5e6f5;}
+
+  /* ---------- selection bar ---------- */
+  #selbar{position:fixed;z-index:65;display:none;gap:2px;padding:4px;align-items:center;
+    background:var(--ink);border-radius:99px;box-shadow:0 8px 26px rgba(28,27,25,.28);}
+  #selbar.open{display:flex;}
+  #selbar button{font-family:var(--sans);font-size:12px;color:#f4f1ec;background:transparent;
+    border:none;border-radius:99px;padding:9px 14px;cursor:pointer;white-space:nowrap;}
+  #selbar button:hover{background:rgba(255,255,255,.14);}
+  #selbar .dot{width:22px;height:22px;border-radius:50%;padding:0;margin:0 1px;flex:0 0 auto;
+    border:1.5px solid rgba(255,255,255,.28);}
+  #selbar .dot:hover{border-color:#fff;transform:scale(1.12);}
+  #selbar .dot.y{background:#fbeeae;}
+  #selbar .dot.g{background:#d8ecd2;}
+  #selbar .dot.p{background:#f8d9e6;}
+  #selbar .dot.b{background:#d5e6f5;}
+  #selbar .erase{padding:9px 11px;font-size:14px;line-height:1;}
+  #selbar .sep{width:1px;background:rgba(255,255,255,.16);margin:6px 1px;}
+
+  /* ---------- explain tooltip ---------- */
+  #tip{position:fixed;z-index:60;width:min(360px,calc(100vw - 24px));
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 10px 34px rgba(28,27,25,.14);padding:14px 16px;display:none;font-family:var(--sans);}
+  #tip.open{display:block;}
+  #tip .hw{font-family:var(--serif);font-size:19px;line-height:1.3;margin-bottom:2px;}
+  #tip .infl{font-size:11.5px;color:var(--ink-faint);margin-bottom:9px;}
+  #tip .tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:11px;}
+  #tip .chip{display:inline-block;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 9px;}
+  #tip .chip.gram{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.01em;
+    text-transform:none;color:var(--ink-soft);background:#f1efeb;}
+  #tip .chip.reg{text-transform:none;letter-spacing:.02em;color:#7a5d7a;background:#f2ecf2;}
+  #tip .freq{display:inline-flex;gap:3px;align-items:center;margin-left:auto;}
+  #tip .freq i{width:6px;height:6px;border-radius:50%;background:var(--line);display:block;}
+  #tip .freq i.on{background:var(--accent);}
+  #tip .sec{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  #tip .sec.first{border-top:none;padding-top:0;margin-top:0;}
+  #tip .lbl{font-size:9.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);margin-bottom:5px;}
+  #tip .en{font-size:14px;line-height:1.55;color:var(--ink);}
+  #tip .ex{font-family:var(--serif);font-size:13.5px;line-height:1.5;color:var(--ink-soft);
+    margin-top:8px;padding-left:11px;border-left:2px solid var(--accent-soft);}
+  #tip .why{font-size:13.5px;line-height:1.55;color:var(--ink);}
+  #tip .load{font-size:12.5px;color:var(--ink-faint);}
+  #tip .err{font-size:12.5px;line-height:1.5;color:#a4443a;}
+  #tip .acts{display:flex;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  #tip .acts button{font-family:var(--sans);font-size:12px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:999px;padding:8px 13px;cursor:pointer;white-space:nowrap;}
+  #tip .acts button:hover{border-color:var(--accent);color:var(--accent);}
+
+  noscript{display:block;max-width:var(--col);margin:60px auto;padding:0 24px;
+    font-size:16px;line-height:1.7;color:var(--ink-soft);}
+
+  /* ================= TABLET  (iPad portrait & landscape) ================= */
+  @media (min-width:768px){
+    :root{--read:20px;--tap:38px;}
+    .bar{height:60px;}
+    #app{padding-top:64px;}
+  }
+  @media (min-width:1024px){
+    :root{--col:760px;--read:20.5px;}
+  }
+  /* Touch devices: no hover lookup, bigger targets, roomier popovers */
+  @media (hover:none),(pointer:coarse){
+    :root{--tap:42px;}
+    .w{-webkit-tap-highlight-color:transparent;}
+    #tip{width:min(400px,calc(100vw - 24px));padding:16px 18px;}
+    #tip .acts button{padding:11px 16px;font-size:13px;}
+    #selbar button{padding:12px 18px;font-size:13px;}
+    .prow{padding:14px 12px;}
+    .prow .x{padding:0 10px;font-size:19px;}
+    .search input{font-size:16px;}      /* 16px stops iOS from zooming on focus */
+    .search input:focus{width:240px;}
+  }
+
+  /* ---------- phone ---------- */
+  @media (max-width:640px){
+    :root{--read:17.5px;}
+    .brand{display:none;}
+    .bar{padding:0 16px;gap:7px;}
+    #player{padding:0 16px 6px;gap:5px;}
+    #app{padding:36px 16px 40vh;}
+    .search{flex:1 1 auto;}
+    .search input{width:100%;}
+    .search input:focus{width:100%;}
+    .voicetag{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="bar">
+    <div class="brand" id="brand"></div>
+    <form class="search" id="searchForm">
+      <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <button type="submit" id="qBtn">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      </button>
+    </form>
+    <button class="btn" id="dictBtn" data-action="dict" aria-pressed="false"></button>
+    <button class="btn icon" data-action="panel" id="bmBtn">
+      <svg viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2z"/></svg>
+    </button>
+  </div>
+  <div id="player">
+    <button class="pbtn" data-action="prev"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5l-9 7 9 7z"/></svg></button>
+    <button class="pbtn main" id="playBtn" data-action="play"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+    <button class="pbtn" data-action="next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <span class="pmeta" id="pmeta"></span>
+    <select class="sel" data-action="gran" id="granSel"></select>
+    <select class="sel" data-action="model" id="modelSel"></select>
+    <span class="voicetag" id="voicetag"></span>
+  </div>
+</header>
+
+<div id="panel"></div>
+<div id="selbar">
+  <button data-action="sel-explain" id="selExplain"></button>
+  <span class="sep"></span>
+  <button data-action="sel-play" id="selPlay"></button>
+  <span class="sep"></span>
+  <button class="dot y" data-action="hl" data-c="y"></button>
+  <button class="dot g" data-action="hl" data-c="g"></button>
+  <button class="dot p" data-action="hl" data-c="p"></button>
+  <button class="dot b" data-action="hl" data-c="b"></button>
+  <button class="erase" data-action="hl-erase" id="selErase">&#9003;</button>
+</div>
+<div id="tip"></div>
+
+<main id="app"></main>
+
+<noscript id="ns"></noscript>
+
+<script>
+'use strict';
+(function () {
+
+/* ══════════════════════════════════════════════════════════════════
+   ①  CONTENT — replace this object to publish a different text.
+       Nothing below section ③ needs to change.
+
+       Block types:
+         {t:'p', x:'...'}                 paragraph
+         {t:'q', x:'...'}                 block quotation
+         {t:'n', x:'...'}                 note / footnote box
+         {t:'t', head:['A','B'], rows:[[left,right], ...]}   two-column table
+
+       `id` keys the saved bookmarks. Change it when you change the text,
+       otherwise the old bookmarks point at the wrong paragraphs.
+   ══════════════════════════════════════════════════════════════════ */
+var ARTICLE = {
+  id: 'fragility-ch5',
+  kicker: 'The Fragility of Goodness · Part II',
+  title: '5 — The Republic: true value and the standpoint of perfection',
+  blocks: [
+
+{t:'pg',n:'136',h:``},
+{t:'epi',x:`I am amused, I said, that you seem to be afraid of the many, in case they should think that you are prescribing useless studies. It is no trivial matter at all, but a difficult one, to realize that there is in the soul of each of us an organ or instrument that is purified and rekindled by mathematical studies, when it has been destroyed and blinded by our ordinary pursuits, an organ whose preservation is worth more than that of ten thousand eyes, for by it alone is the truth seen. Those who share this belief will think your proposal surpassingly good; those who have never had any perception of these things will probably think that you are talking nonsense - for they don't see any other advantage worth speaking of in these pursuits.`,c:`Republic 527D-E`},
+{t:'p',x:`Plato's assault on the goodness of the ordinary opens on a scene of daily Athenian life. Socrates (who still believes that philosophy can be practiced as one element in the life of the democratic citizen) goes down from Athens to the Piraeus. With him is Glaucon, older brother of Plato. The year is probably 421, during the Peace of Nicias: a time of rest and relative stability. By the time of composition, about fifty years later, most of the dialogue's principal characters are dead, and few of them peacefully. Three (Polemarchus, Niceratus, and Socrates) have been executed on political charges; the first two were brutally murdered for their fortunes by an oligarchic faction led by members of the family of Plato. We watch these peaceful interactions, then, with apprehensiveness and a sense of impending violence - a violence nourished, evidently, by the desires of the appetitive part of the soul.¹`},
+{t:'p',x:`They go, Socrates and Glaucon, to observe the festival of Bendis, a recently imported Thracian goddess. Socrates is at first curious, later admiring. Using repeatedly the language of seeming and appearing, he makes a value judgment: both the local procession and the one sent by the Thracian visitors were 'fine' or 'splendid' (kalē)* - or so it seems to him. Later that same evening, furthermore, there is to be a torch-race on horseback, followed by an all-night festival. And that, judges Plato's older brother Adeimantus, should be really 'worthwhile to see' (*axion theasasthai*, 328A).`},
+{t:'fn',m:'*',x:`On the range of meaning of this important aesthetic-ethical term, usually rendered 'beautiful', 'noble', 'fine', see Ch. 6, p. 178, where I suggest that it comes very close to introducing a unified conception of value (both moral and aesthetic). For a discussion of Greek terms that are related to our 'value', see Ch. 1, p. 7 and n. 12.`},
+{t:'pg',n:'137',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`Between the procession and the torch-race, then, these Athenian democrats find a little room for philosophical conversation. It is in this space that the entire *Republic* takes place. All the characters but Socrates seem (at first, at any rate) to consider philosophy a diversion like everything else, no more and no less valuable. In the true democratic spirit, they attach equal value to all of their interests and pleasures - each of them, like the democratic man described in Book VIII, 'handing the rule over himself to each appetite as it comes along until it is replenished, as if it had chosen the lot for that office, and then in turn to another, dishonoring none but fostering them all equally' (561B). This attitude to value is linked, clearly, with a lack in both constancy and self-sufficiency. A guardhouse kept in such a way is at the mercy of any ruler that happens along. A soul kept in such a way can all too quickly change its course in obedience to a new mastering desire. And because its desires lead it, so frequently, to attend to vulnerable things, it can all too rapidly be stripped of what it values. We know that the men who here are friends will soon be killing one another for power and property. Of all the dead, only Socrates dies without losing anything that he loves.`},
+{t:'p',x:`The scene shortly shifts to the home of Cephalus (a man whose name means 'head'). This old man's bodily deficiency has brought him, as he tells us, a larger than usual measure of focus and stability. Too infirm to walk easily in the city, his bodily desires dimmed by advancing years, he lacks many of the younger men's distractions; he finds his love of argument correspondingly increased (328C-D). Most of the old men he knows, Cephalus tells Socrates, mourn the coming of old age. They think it has impoverished their lives. Since they attach worth to the bodily appetites and to the activities that satisfy them, they 'long for the absent pleasures of youth. They recall the pleasures of sex and drinking and feasting, and others that go with these, and they are angry, as if they had been deprived of important things - as if they used to live a good life and now aren't even living' (329A). The vulnerability of their good living is - we see again - directly connected with their thought about value. Change and happening are problems for them because they care about chance-governed and changing things. For Cephalus, on the other hand, the change to old age simply means the end of a problem. He reminds Socrates about the poet Sophocles, who, when asked whether he was still capable of making love to a woman, answered, 'Silence, O human being. I am extremely happy to have escaped that, like a slave who has gotten away from a mad and savage master' (329B-C). Cephalus agrees: 'For a great peace and freedom from these things comes with old age. After the tension of the appetites relaxes and ceases, it is just what Sophocles said, an escape from many mad masters' (329C).`},
+{t:'p',x:`The *Republic*'s opening confronts us, then, with a question about value: what is truly worthwhile, worth doing and worth seeing, in a human life? It indicates to us (something that should be no surprise by now) that the answer to this question will be closely connected with our questions about risk and self-sufficiency. The average democratic citizen is maximally unsafe because he attaches value, in his conception of good living, to activities and subjects that are unsafe - that are,`},
+{t:'pg',n:'138',h:`Plato: goodness without fragility?`},
+{t:'p',x:`in fact, almost certain to fail sooner or later. Cephalus and Sophocles do better. But Cephalus is still tormented by his concern for money and by his fear of death. And we suspect that he has ascribed more importance to appetite than he himself knows: for we shall later see that it is possible, even in one's prime, to live a life much less tormented by 'mad' appetite than his, because less attentive to its objects. By the argument's end, Socrates will have defended as the best human life a life much more extreme in its detachment than Cephalus's: the life of the philosopher, whose soul the *Phaedo* describes as akin to the forms it contemplates: pure, hard, single, unchanging, unchangeable. A life, then, of goodness without fragility. We would like to understand his arguments for the superior value of this life.`},
+{t:'p',x:`As we ask Plato's question about value, we must also be asking, with him, an epistemological question: how, or from what standpoint, are adequate judgments reached about the value of prospective constituents of a life? For it is plain from the dialogue's opening that ordinary people, when asked what seems fine to them, will name many activities that the philosopher's argument will in the end judge worthless; and in general, as Socrates will later observe, most people, if asked what is worthwhile, will praise the content of their own lives (581C-D). But Plato is convinced that most of these answers are misguided: the 'eye' of our human souls is 'deeply buried in some barbaric slime' (533D) and cannot see clearly. From what position, then, does this eye see well? And what is the nature of the obstacles to its true vision? Sophocles made a suggestion. With his lofty 'O human being' - words that Plato, at any rate, surely chooses deliberately - he implied that the problem lies with our distinctively human nature; that correct perception would come from a standpoint that is more than human, one that can look on the human from the outside. (*Republic* IX will speak of a 'real above' in nature.) We need to explore, then, not only the account of value but also the account of true vision that goes with it.`},
+{t:'p',x:`We can now begin this search: but in a complicated way. For there is a difficult interpretative problem in our path. We need to set it out and clarify our relation to it before we can properly appreciate Plato's arguments.`},
+{t:'sec',x:'I'},
+{t:'p',x:`The *Republic* argues that the best life for a human being is the life of the philosopher, a life devoted to learning and the contemplation of truth. The *Republic* also argues that the best life is a life 'ruled' by reason, in which reason evaluates, ranks, and orders alternative pursuits. Both of these claims about the *Republic*'s theory of the good are generally accepted; what interpreters are less readily able to settle is how, and whether, these two Platonic claims about the good are related. It appears that the conception of 'rule' by reason articulated in the fourth book of the dialogue is a purely formal conception that makes no attempt to specify the content of the life that gets planned and ordered by reason. All that is required there is that the agent harmonize his or her soul, order his`},
+{t:'pg',n:'139',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`or her life plan, in accordance with some orderly conception of the good. The reasoning part of the soul (*logistikon*) determines what has value and how much, 'taking thought for the good of the entire soul'.⁴ The difference between the reasoning or intellectual part and the other motivational elements of the person is to be found in this capacity for overall evaluation and selection. Appetites merely reach out for objects, without conceiving of them as overall goods. But there is no reason, according to Book IV's formal conception of rational valuation, why the content of a life plan should not include appetitive activities as intrinsically valuable components that get selected and arranged alongside the others. There is also no reason to suppose that reason will organize the agent's life around the activity of reasoning. In fact, it seems quite natural to suppose that the reasoning part, in taking thought for the good of the 'entire soul' of a complex human being, will accord intrinsic value to activities that satisfy natural, persisting appetitive needs. Plato does not yet say anything against this; we suppose that any well-ordered content should satisfy his requirements.`},
+{t:'p',x:`And yet, by the time we reach the end of the *Republic*, Plato has said a great deal about content. He has, in fact, rejected many of the most common human activities, including all appetitive activities, as lacking in true or intrinsic value, and he has chosen the life of the philosopher as the best life. In fact, Socrates claims very precisely that this life is 729 times better than the worst life, the life of the tyrant. This move beyond Book IV's purely formal account is prefigured by Socrates' cryptic claim, in Book VI, that the earlier story was insufficient because it stopped with a merely human agreement and used as its measure of value a human, therefore an imperfect, being. The *Protagoras* has already shown us that such a measure will not do for Socrates. Such 'laziness', he now says, is a quality of mind that our city and our philosophers must reject. Similarly, in the *Phaedo*, Socrates defends as the best life a life which he calls a practice for death: a life of philosophical contemplation in which the philosopher dissociates himself or herself as much as possible from the desires and pursuits of the human body, according them no positive value at all.`},
+{t:'p',x:`Recent interpreters are in agreement that Plato's final judgments of the value of lives, in the middle dialogues, cannot be adequately explained by appeal to *Republic* IV's formal argument alone. Clearly Plato has an independent interest in the components of lives; overall order is only necessary, and not sufficient, for the highest sort of value. But there is, in the recent literature on this question, a tendency to think of these claims about content as an embarrassment to Plato, and to reconstruct his argument, insofar as possible, so that it relies on the formal considerations alone. One outstanding such attempt is that of Gary Watson in his article 'Free agency', a very persuasive picture of Book IV's account of rational valuation, in which it is explicitly asserted that intrinsic value will, in this account, be attached to activities that satisfy our standing appetitive needs.¹⁰ Watson, however, is not offering an interpretation of the *Republic* as a whole; he is therefore free to ignore the additional questions raised by the later books. In *Plato's Moral Theory*, however, Terence Irwin does offer a reading of the whole *Republic* that`},
+{t:'pg',n:'140',h:`Plato: goodness without fragility?`},
+{t:'p',x:`develops a position similar to Watson's as an account of the entire work.¹¹ In his valuable and stimulating book, Irwin argues that Plato's primary interest is in describing a conception of the good as the harmonious adjustment of a number of separate constituents, each possessing intrinsic value. In Irwin's reading, these intrinsic ends will be the personal ideals of each human agent, discovered by the deliberative procedures of recollection (interpreted here as a kind of introspection¹²) and self-criticism. Any life content will be acceptable to Irwin's Plato, provided that it can satisfy, in an orderly way, the agent's own system of desires. In the case of certain lives that Plato rejects, the rejection can be accounted for on grounds of form.¹³ But Irwin concedes that Plato does in fact reject, on grounds of content alone, lives whose orderly form seems satisfactory. Irwin also admits that the introspective procedures by which a life content is arrived at on his account are nowhere mentioned in the *Republic* itself; in their place we find a claim that only a life dedicated to contemplation of the truth - a life not everyone can have, or perhaps even want - is fully worthwhile life. But, in Irwin's opinion, this is just a mistake on Plato's part. 'It is regrettable', he writes, 'that Plato leaves us gaps to fill here, because of his interest in contemplative rather than in practical wisdom.' And he attributes this and other 'gaps' to Plato's distance from our contemporary philosophical interests: 'He does not stress the parts of the problem we might like him to stress; but that is because his view of the problem and of the right kind of answer is not the view of some more recent moralists.'¹⁴`},
+{t:'p',x:`We have turned to Plato as a thinker whose importance is closely linked to the depth and severity of his challenge against prevailing beliefs, both of his day and of our own; so this 'distance' does not, by itself, alarm us. But it would be regrettable - and on Plato's own terms - if vague prejudice and interest had indeed, at this crucial juncture, displaced philosophical argument.¹⁵ Furthermore, it is very important for our particular concerns to determine whether Plato's arguments do or do not support these judgments of content. For if Irwin is correct, only one of our central concerns, the harmonious interrelationship of values, is actually addressed in Plato's arguments; the fragility or instability of individual commit- ments is not of concern to him or is of concern only to his prejudice. But if he has arguments for his choice of the philosopher's life these will be likely to tell us why a good life should exclude or minimize our most fragile and unstable attachments, consecrating itself to the more self-sufficient intellectual pursuits. As we pursue this problem we find, as I shall argue in this chapter, that the material about content is not peripheral, but quite central to the *Republic*'s theory of the good. I shall argue that the 'gap' Irwin detects in the *Republic* argument is actually filled by a complex theory of true value and of objective valuation which, far from being built upon prejudice,¹⁶ is well worth our most serious attention. In fact, if we do not consider it, we run the risk of stripping Plato of some of his deepest and most characteristic arguments, of central importance for our own inquiry. In the end we risk turning the *Republic* into a comfortable expression of the liberal principle (mentioned in Book VIII) that it should be 'open to each person to structure an arrangement for his own life, the one that pleases him' (557B) - rather`},
+{t:'pg',n:'141',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`than, what it is, a profound and unsettling attack on that principle as a basis for genuinely good living.`},
+{t:'p',x:`Although the *Republic*'s move from structure to content appears abrupt and puzzling, it is less so once we see that Plato has provided an argument to support it. Towards the end of Book IX, after describing several alternative lives, Socrates introduces a two-part 'demonstration' (580C-D)¹⁷ to show Glaucon that the life of the philosopher is the best (most *eudaimōn*) human life.¹⁸ The complex argument that follows sets up a division of enjoyments or pleasant activities, activities performed with enthusiasm or alacrity, that is related to Book IV's tripartite division of the soul into appetitive, emotional, and intellectual elements. (Although considerations of pleasure appear initially to be separated off from considerations of goodness, it is clear as the argument progresses that the ranking of 'pleasures' is a ranking not of subjective feelings about activities, as to their strength or intensity, but of the activities themselves, as to their true worth or objective desirability. Thus the 'true' pleasures are those activities that are chosen in harmony with true beliefs about value or worth, as opposed to those in which agents take pleasure because they falsely believe them to have worth. The latter can and do still give rise to very intense feelings of pleasure, as Plato stresses; but they will not be ranked high as pleasures according to Plato's scheme.)¹⁹ Socrates now argues that the activities associated with the 'reasoning part' of the soul, learning and the contemplation of truth, are the best activities in a human life. He argues first epistemologically: the correct criterion of judgment is 'experience combined with wisdom and reason' (582C-583A). The philosopher alone judges with the right criterion or from the appropriate standpoint; he selects his own activities as best. Second, Socrates argues that the philosopher's activities are superior on intrinsic grounds: being concerned, as they are, 'with the unchanging and immortal and with truth', they have a higher worth than the pursuits associated with the other two parts (585Aff.).`},
+{t:'p',x:`Although these two parts of the argument are formally separate, their connection is close: the epistemology of value-judgment underwrites the choice of this content for true value, and the intrinsic merits of the content dispose us to be content with the standpoint that has approved it. (We shall later ask questions about this relationship.) Epistemological considerations continue to be prominent in the second part of the argument, where the ordinary person's errors in value ranking are explained by the observation that his experience has not taken him to the place from which, alone, appropriate judgments of worth can be made. Unlike the philosopher, who has traveled to the 'real above' in nature, this person has only oscillated between the 'below' and the 'middle' (584Dff.).`},
+{t:'p',x:`In this passage, if anywhere, Plato shows us the considerations that would lead a soul 'ruled by reason' in the formal sense to choose a certain specific life content, that of the life devoted to philosophy, rather than some other orderly plan of life. And here, if anywhere, he shows us the standpoint from which true rankings are made. The passage is compressed and difficult; it is not readily evident how Plato`},
+{t:'pg',n:'142',h:`Plato: goodness without fragility?`},
+{t:'p',x:`moves from his formal ideal to the specification of content through this ranking of activities, or how the ranking itself is produced.²⁰ Fortunately, however, the theory of activity-value that is cryptically discussed here receives a fuller development in other related dialogues, especially the *Phaedo*, *Gorgias*, and *Philebus*. If we bring related passages to bear on this one,²¹ we shall better appreciate the strength of Plato's position.`},
+{t:'p',x:`In the *Gorgias*, Socrates faces an opponent who grants the importance of having a rational life plan, but wishes to specify the content of that plan in a way that is repellent to the philosopher: the best life is a life organized by reason for the maximal enjoyment of sensual pleasure. The 'naturally noble and just' man, Callicles argues, will allow his appetites to grow very great, in fact, as great as possible. But, because of his superior 'courage and practical intelligence' he will also 'be sufficient to minister to them at their greatest and to satisfy every appetite with what it craves' (492A). Here, then, is a life formally ruled and ordered by reason. But most of its episodes will be episodes of appetitive activity: eating, drinking, sexual indulgence. Socrates' reply should, then, give us some insight into the nature of his argument for the superior value of the content of the philosopher's life.`},
+{t:'p',x:`It should be noticed, first, that Callicles is not at all disturbed by the large element of need in the life he describes, the extent to which reason's choices 'minister to' (*hupēretein*) the exigencies of the body.²² He seems to believe, in fact, that just because we are beings with such-and-such needs, there is a certain positive value attaching to the pursuits that satisfy those needs. He requires only that need remain within the limits of reason's power to procure satisfaction and that the whole life be not haphazard, but under the executive direction of intelligence. Furthermore, Callicles seems to attach a positive value to the very having of these appetitive needs: for Socrates' claim that those who need nothing are living well (are *eudaimōn*) fills him with distaste. 'In that case', he replies, 'stones and corpses would be living superlatively well' (492E). He evidently, then, ascribes positive intrinsic value not to the state of replenishment itself, which even a corpse might exemplify, but far more to the having and pleasant replenishing of the human appetites - and the bigger, apparently, the better: 'the maximum inflow' (494B).²³ It is Socrates' aim to attack both of these claims: both that appetitive activities have value because of the way in which they answer to our needs and that there is positive value, for a human being, in the very having of recurring appetitive needs.`},
+{t:'p',x:`The strategy of Socrates' argument is to find some cases of activity bringing satisfaction of an appetitive need for which Callicles will concede that the activity in question is shameful or ridiculous, the need a need any person should wish not to have. Callicles is then pressed to see a close similarity between these cases and his own favored activities; and he is urged to concede that, in his own case as well, the activities are without positive intrinsic value, the needs whose disappearance it would be rational to want. The two text examples presented by Socrates are the pleasure of scratching an itch and the sexual enjoyment of the`},
+{t:'pg',n:'143',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`passive homosexual. Callicles is, in fact, not won over by the first: he tenaciously tries to claim that scratching is a perfectly good component of the ideal life. But the second example so deeply offends his social and sexual prejudices that he is forced to rethink his entire position. 'Aren't you ashamed, Socrates,' he says, 'to lead the argument to things of that sort?'²⁴`},
+{t:'p',x:`Socrates' implicit argument about these two cases seems to be as follows. Itching is a need, and scratching an activity answering to and assuaging that need. Scratching has, therefore, what we might call need-relative or replenishment value. But we can easily see, if we sever the activity from the replenishment context, that we do not ascribe any independent intrinsic value to the activity of scratching. It is nothing that a rational being would include as a component of a plan for the good life.²⁵ It is valuable as, and only as, the activity that calms a certain sort of troublesome bodily feeling. If we never had itches, we would have no reason at all to scratch. If a person thought scratching a good sort of thing to do and went around scratching whether or not he had an itch, we would think him comical or disturbed.`},
+{t:'p',x:`Furthermore, it is easy to see that we wish, in general, not to be afflicted with the itching that gives rise to the desire for scratching. Perhaps this is just because itching itself is so excruciating; perhaps a further reason is that the activity that relieves it is so undignified and so embarrassing. In any case, we do not value the having of this need or pain; we do not prefer the life with more and greater itches to the life with fewer and smaller.²⁶ We would think that a person who prayed for the greatest possible itches, provided that he or she always had the power to scratch, was either a maniac or a clown.`},
+{t:'p',x:`The example of the passive homosexual works in a similar way.²⁷ To take one's sexual pleasure in this manner is, for some people, to satisfy a need. But the activities involved are not, just on account of their need-relative value, intrinsically good or valuable activities. They do not make for *eudaimonia*: a life made up of such episodes as components is not a valuable human life (494E). In fact (assuming for the moment the point of view of a Greek of Callicles' class and background²⁸), we agree that it is a ridiculous and loathsome way to behave. Callicles would laugh at people who do that, even if he knew they were satisfying a need. And nobody, he assumes, would choose to do that if he did not have that need already. The need, furthermore, is a need that Callicles hopes and prays never to feel. He wishes that no child or friend of his will ever feel it. In this case, the wish not to have the need cannot be explained by the unusual pain of the need itself; this sexual need is, by itself, no more painful than the sexual needs which Callicles values and fosters. The need is wished away, presumably, because it leads to activities that are antecedently and independently classified as disgraceful. The life composed of them is 'terrible and shameful and wretched' (494E). Callicles wishes not to need to do shameful and wretched things.`},
+{t:'p',x:`The examples, then, force Callicles to concede that no activity has positive intrinsic value merely because it replenishes a lack or answers to a need. And some needs are themselves hateful just because the activities they prompt are`},
+{t:'pg',n:'144',h:`Plato: goodness without fragility?`},
+{t:'p',x:`independently judged to be bad, silly, or unmanly. We cannot, then, settle issues of life-content simply by looking at what will satisfy the various needs that we happen antecedently to have, or by asking people in the grip of those needs what they think they want. We must look independently at the activities themselves, and ask whether they are noble.`},
+{t:'p',x:`But Socrates does not introduce these two examples as isolated or exceptional cases. He uses them as particularly clear cases that display features shared by all cases of appetitive, or, more generally, need-satisfying activity; and he intends to attack the claim of all these activities to be component parts of the good life. The examples are introduced via a general consideration of the structure of the appetitive element of the soul (493A3, B1); eating to satisfy hunger and drinking to satisfy thirst are agreed to be paradigmatic examples of the type of activity under discussion (494B-C); and the homosexual case is said to be a 'summary' of this entire group (494E3-4). Finally, at the conclusion of the discussion of the examples, Socrates gets Callicles to concede explicitly that 'every need and appetite' has a similarly pain-relative structure (496D, cf. 497C7). The suggestion clearly is that the appetitive pursuits valued by Callicles are all really like itching and scratching: attractive to someone already afflicted with a certain sort of pain, but of no value in themselves. If we can get ourselves to view these common pursuits from outside, not from the distorting perspective of felt need, but objectively, we will, he suggests, find them as ridiculous, as valueless, or perhaps even as loathsome, as we now find the pursuits of the homosexual or the scratcher. We will therefore wish not to have such needs, so that our lives need not be spent in repeated and somewhat absurd attempts to satisfy them. Socrates' stories of the leaky jars and of the 'torrent-bird' told in this same passage, tried to get us to see the futility and squalor of appetitive pursuits. All of us, insofar as we live an appetitive life, are like vessels full of holes, vainly pouring into ourselves, again and again, a satisfaction that as promptly deserts us. Or, worse, we are like an especially loathsome sort of bird that excretes as rapidly as it eats, and is constantly doing both.²⁹ Overall rational order is not enough: the constituents of a rational life must also be intrinsically choiceworthy.`},
+{t:'p',x:`Socrates' arguments leave us with a number of troublesome questions. It is not clear that Callicles should be so quickly impressed by Socrates' attempted assimilation of his 'naturally noble' person to types that he himself despises. Even if there are some activities that have need-relative value without having any separate intrinsic value, it is not clear why we should take the very presence of need-relative value to be evidence of the absence of intrinsic value. Socrates clearly implies this - but clearly his argument will not take him this far. Considerations that would help to fill out the argument - considerations, for example, of the instability and impermanence of appetitive activity - are barely alluded to and not developed. But we will return to these issues later, and turn now to the evidence for a similar theory of value within the *Republic* itself.`},
+{t:'p',x:`Early in the *Republic*'s second book Glaucon presents a tripartite classification of activities with reference to the kind of value or worth they possess. It does not`},
+{t:'pg',n:'145',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`exploit precisely the same distinction that we found in the *Gorgias* and shall find again in the *Republic* IX argument about enjoyings. But it is a related distinction, and one which Plato tends to run together with the one that we have seen; and, equally important, we shall encounter here a number of examples that play a central role in the value-theories of *Republic* IX and the *Philebus*. There are, Glaucon tells us, three kinds of goods (*agatha*), or things we would choose to have. (Although this might look like the introduction to a list of possessions, the members of his lists are all, in fact, activities that we think good and choose to pursue.³⁰ Glaucon's 'We would choose to have' suggests that what is in question is not the content of all actual pursuits, but only the content of rational choices, or choices made in certain conditions. It invites us to think about good and bad conditions for choice, pointing forward to the epistemological questions of *Republic* IX.) The first group contains activities that are chosen not for their consequences, but for their own sake alone: 'enjoying oneself, and all the harmless pleasures which have no further consequences besides the joy one finds in them' (357B). Second are activities that we choose both for their own sake and for the sake of independently desirable consequences: reasoning, seeing, the healthy functioning of the body. Third are things valuable only for their independently desirable consequences, and not choiceworthy in themselves: exercising, under- going treatment when one is sick, making money.`},
+{t:'p',x:`Here again, we see that certain pursuits in which we engage have no intrinsic value. We rationally choose them because we have certain needs, pains, or interests, and the pursuits are efficient instrumental means to the desired consequences. A healthy person who took bad-tasting medicine would be irrational. Even exercising, which answers to a standing need of any creature with a bodily nature similar to ours, is held to be one of the things you go through just to be in a state you otherwise want to be in; it has no merit just as an activity. All of these activities look worthwhile in relation to a contingent context; take away the context and the reasons for selecting them will be gone. Contrasted with these cases are the intrinsically valuable components of a life: the good functioning of mind and body that is at once both valuable and useful, the useless but valuable enjoyments. (The latter, to judge from examples in other passages, would include certain aesthetic and sensory pleasures.)`},
+{t:'p',x:`This distinction is not exactly the same one as the *Gorgias*'s distinction between merely need-relative and non-need-relative value. There might be pursuits undertaken as instrumental means to a desired end that were not prompted by any felt pain or lack. Exercise is not always undertaken because bad condition is felt as painful. And it could be argued that not every pursuit that has its value merely, or solely, in relation to some antecedent pain that it assuages is chosen as an instrument to the resulting state of relief or replenishment.³¹ But the two contrasts are very closely related. Both contrast merely context-relative value with value that would be value in any circumstances whatever; and, more important, they contrast deficiency-relative activities with activities that would be valuable even had we no deficiencies at all. Their 'right-hand' side, the side of intrinsic, non-relative value, is the same in the two cases, and Plato appears to treat the`},
+{t:'pg',n:'146',h:`Plato: goodness without fragility?`},
+{t:'p',x:`two contrasts as interchangeable for the purposes in which he is interested. This is not, I think, a particularly grave problem for his argument. What is still unanswered in this classification, however, is the question of the *Gorgias*: are we to suppose that every activity whose value derives primarily from its relation to our needs is just for this reason entirely lacking in intrinsic value? *Republic* II does not clearly make this claim; indeed, some valuable activities are also useful, though their value does not derive from usefulness. But the stronger claim is explicitly advanced, in connection with a similar instrumental/intrinsic contrast illustrated by similar examples, in an early argument of the *Gorgias*. There Socrates and Polus agree that if someone does something for the sake of something else, he does not truly want that which he does, but only that for the sake of which he does it; and that this is true whenever someone wants something of instrumental value (467D-468A).³² Why should we think this? For a deeper understanding of such claims and their consequences for the status of appetitive activity, we must now return to the argument in *Republic* IX with which we began, supplementing it with material drawn from the *Phaedo*, and from the classification of enjoyings in the *Philebus*.`},
+{t:'p',x:`The Book IX argument defends the content of the philosopher's life over the available alternatives by developing a theory of the value of activities whose elements should by now look familiar to us. There are, says Socrates, some activities that people value only because they provide relief from an antecedent pain or lack. The activities are accorded value either (1) because they seem good and pleasant by contrast with the pain that preceded, or (2) because they are means to a pain-free end state that itself seems good by contrast with the preceding pain; or sometimes for both reasons (583C-584A). But, Socrates continues, we can see that neither the activities nor their resultant end states are intrinsically valuable. They are not 'truly pleasant' at all: the judgment that they are worth something is thoroughly based on illusion. For no rational creature would choose to engage in such activities were he or she not in need or pain. Nor is the state of null pain in which these activities culminate anything more valuable than a neutral or zero state (583C-D). It has in itself no positive value; indeed, contrasted with some activity that is intrinsically good or pleasant, this state would look like a state of deficiency, since it is inactive. It is valued highly only by those human beings who have never experienced real intrinsically good enjoyings, people, as Socrates puts it, who have never traveled to the 'above' in nature, but have only oscillated between the 'below' and the 'middle'. The view such people take of the good is a distorted one because of the limitations of their perspective. 'None of these views is healthy with regard to the truth about pleasure - there is a kind of bewitchment' (584A). Socrates' claim (if we now combine these observations with the epistemological claims of the earlier part of the argument) is that a human being who has had the right sort of experience, viz. the philosopher, and who judges from the appropriate standpoint or using the correct criteria, will be in a position to detect the error of the many and to make correct value-ascriptions.`},
+{t:'pg',n:'147',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`We still lack a clear account of what the reliable perspective or standpoint is, this standpoint of the 'real above' in nature. But the philosopher's ability to judge correctly seems to have less to do with mere quantity of experience than with the fact that experience has taken him to a certain place: a place where reason, free of pain and limitation, can stand alone, above the restrictions imposed upon thought by merely human life. (Socrates' reference to a 'bewitchment' reminds us of a similar passage in the *Phaedo*, in which the most powerful sources of cognitive 'bewitchment' were said to be the needs and appetites of the body (81B).)`},
+{t:'p',x:`We have, then, a fusion of our two familiar contrasts. Intrinsically valuable activities are now divided off both from merely need-relative and from merely instrumental values, both of which are said to lack intrinsic value. (A new point which Socrates adds here is that even the consequences of the instrumental activities in question have, at best, a merely pain-relative and not an intrinsically positive value.) In the latter mixed group, Socrates now argues, belong all of our ordinary appetitive pursuits: eating, drinking, sexual activity. Also, he insists, though without additional argument, the activities associated with the emotional part of the soul, and the enjoyment of anticipating future bodily pleasures (586C, 584C9-11). In the former, intrinsically valuable group we have the pleasures of smell (584B), which are very intense, but neither follow an antecedent pain nor leave pain behind when they depart.³³ But the central example of pure or genuine enjoying is the intellectual activity of the philosopher. (We should never lose sight of the importance of mathematical reasoning and contemplation for Plato as a central case of these pursuits.) Socrates' praise of this activity gives us insight into the features that are, in his view, constitutive of intrinsic value. Both here and in the *Phaedo*'s related discussion of goods of soul and body,³⁴ he stresses three features.`},
+{t:'p',x:`(1) Purity: (a) of activity. The activity is chosen itself by itself; it contains no necessary admixture of pain, either as a source of antecedent motivation or as a concomitant experience, by contrast with which the pleasure of the activity is felt as pleasure. So it has its worth by and in itself, without standing in a necessary relation to, being 'mixed up with', something else (584C, 585A-B, 586B-C; cf. *Gorg.* 496C-497D, *Phd.* 66D-E, 60A, 70D). (b) Of objects. The objects of intellect are themselves particularly clear and simple paradigms, unmixed with their contraries, existing themselves by themselves (cf. *Phd.* 67B).`},
+{t:'p',x:`(2) Stability: (a) of activity. The activity can continue in the same way, without cessation, abatement or variation. It is thus very different in structure from the ebb and flow of replenishment-activities, which exhibit an internal sequence of changes and minister to contingent need (585C; cf. *Phd.* 79C-80B). (b) Of objects. The objects of intellect are themselves also maximally stable, in fact (in Plato's view) eternal. They never vary or come to be, but are always there and always in the same condition. The objects of the non-philosopher, on the other hand, are the mutable things of this world, 'never the same, and mortal' (585C; cf. *Phd.* 79C, et al.).`},
+{t:'pg',n:'148',h:`Plato: goodness without fragility?`},
+{t:'p',x:`(3) Truth. The activity of the philosopher leads to a grasp of the real truth about the universe and an ability to give fully adequate accounts, not mere half-truths or conjectures (585C; cf. 533B-C). This last point is important because it tells us that the philosopher's life is superior even when he is not directly contemplating the forms, or doing mathematical and scientific thinking, but is going about his political duties. For even then he will 'know each of the likenesses, what they are and of what, because he has seen the truth concerning fine and just and good things' (520D).`},
+{t:'p',x:`The *Republic*, then, develops a theory of value in which no single element predominates, but in which purity, stability, and truth all play a role in the ranking of objects and also of activities that constitute lives. It supports the selection of these marks of value by claiming that human beings who have had the right sort of experience of the available alternatives and who judge from the standpoint of the 'real above' will choose a life that exemplifies these values, and not their opposites. And it argues, further, that the activities that constitute the bulk of most people's lives - eating, drinking, sex - lack these marks of value, possessing a merely specious value because of the way in which they relieve need or distress, and/or the way in which they lead to states of relief. Certain elements of this value-theory - for example Plato's concern for stability and purity of objects - are closely bound up with the *Republic*'s particular theory of truth and of the objects of knowledge. Others, such as the concern with truth *simpliciter* and with stability and purity of activity, look separable from Plato's particular conception of truth and may not even require a realist conception. None of this seems to depend on mere metaphysical prejudice. Constituents of lives, Socrates argues, must be examined for these marks of value. If they lack them, they cannot be called true enjoyings, truly valuable pursuits. The philosopher's life is found to be superior not because of bias, but because it exemplifies values which, Socrates argues, all rational beings with the appropriate experience would pursue.`},
+{t:'p',x:`Before we look at the evidence for a similar account of value in the *Philebus*, we have two closely related questions about Plato's account. We have said that the bearers of value are activities that can figure as constituents of lives; but that they have this value both in virtue of what they internally are *qua* activity, and also in virtue of the nature of their objects. Plato does not clearly tell us how these two sets of criteria are to be related: whether, that is, we could have a 'pure' activity directed at 'mixed' or 'impure' objects, a stable activity directed at unstable objects, and, if we could, what we ought to say about the value of such activities. This problem is, in fact, one which enters into the interpretation of the stability-of-activity criterion itself. And this brings us to our second question, which concerns the correct understanding of that criterion. For stability, it seems, can be understood in two rather different ways.³⁵ On the first account, an activity is unstable if it necessarily involves an internal sequence of changes. Because of its internal structure, it cannot continue in the same way indefinitely. On the second account, an activity is unstable if it relies for its occurrence on contingent circumstances in the world that might fail to be realized. These two interpretations give different accounts of the instability of appetitive activity. For example, on`},
+{t:'pg',n:'149',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`the first, eating is unstable because its internal structure prevents its indefinite continuation; on the second, it is unstable because it depends upon the presence of food, which might fail to be available. If these two accounts are understood as different accounts of what stability and instability are, they will also be extensionally non-equivalent: for on the first account, smelling a rose will be stable in spite of the transience of roses, whereas on the second it will not. On the second, the activity will not count as stable unless its objects are permanent or highly stable.`},
+{t:'p',x:`Plato is clearly interested in both of these causes of instability. (We shall see in Chapter 6 how he explores them for the particular case of sexual desire.) Although his position is difficult to determine with precision, I believe that he would regard these as two complementary and compatible accounts of the causes of instability, rather than as two rival and incompatible accounts of what instability is. (This interpretation may be supported by *Phd.* 79D5-6, where the activity is unstable 'inasmuch as' or 'because' it deals with unstable objects.) Eating and sexual activity are unstable for two reasons: because of their internal structure and because of the nature of their objects. Smelling a rose is stable internally, but its objects can give rise to instability. In fact, however, it is not so badly off in this respect, given that roses are usually readily replaceable and interchangeable. The stability of an activity is thus causally dependent, to some degree, on either the permanence or the ready replaceability of its objects. An activity which has neither source of instability will be better off than one which has the right internal structure but the wrong objects. But this conclusion does not make Plato's defense of philosophy thoroughly dependent on his particular account of the objects of intellect. We can see how the belief that there is a stable truth there to be known in nature, apart from the changing circumstances of human life, would lend force to a Platonic account of activity-value. We can see, too, how a belief in eternal, non-context-dependent paradigmatic objects would tend to support his belief that contemplative activity is maximally stable, unvarying, and context-independent. In fact, the marks that separate true from apparent value bear a striking and non-coincidental resemblance to the marks that separate forms, as objects of knowledge, from other less adequate objects; the *Phaedo* exploits this connection.³⁶ But stability, purity, and truth may be achieved without separated forms. Even an Aristotelian biologist will be able to insist that what he studies are the stable kinds that replicate themselves in the same way in nature. And the *Symposium* will show us that any scientist or mathematician whatever, with or without eternal objects, is bound to be better off than the lover of unique human individuals.`},
+{t:'p',x:`The *Philebus* supports and expands this account of value, giving further evidence for our reading of Plato's undertaking. Most of this dialogue is explicitly concerned with the critical assessment of prospective constituents of lives and with the construction of a best life out of the acceptable components. In certain ways the account differs from the ethical theory of the middle dialogues; but many important points remain constant. It is quickly agreed that the standard appetitive pursuits - eating, drinking, getting warm, and 'others countless in number' - are`},
+{t:'pg',n:'150',h:`Plato: goodness without fragility?`},
+{t:'p',x:`mere 'replenishment' activities, chosen only in order to relieve an antecedent lack (32A-B, 46C-D, cf. 54Eff.). They are revealingly compared, all of them, to itching and scratching (46A, D) and held to be impure because inextricably mixed up with pain. Later they are included in the best life only insofar as they are absolutely necessary conditions of the intrinsically valuable pursuits (62E; this means that the 'violent pleasures' are omitted altogether - cf. 63D-E). A great part of the dialogue is then spent in the examination of some troublesome cases on which the *Republic* had spent little time: the pleasures associated with the emotions and the pleasures of anticipation. Socrates attempts to assimilate even these apparently 'pure' psychological pleasures to the replenishments by arguing that all are, in some way, relative to a contingent deficiency, whose removal would remove all reason for choosing them: they are all really pleasures 'mixed with distress' (50D). If you have not been harmed, you have no reason for the 'pleasures' associated with anger and revenge; if you have no lack, you have no reason for the 'pleasures' of love. If you have no false beliefs about the future, you have no reason for the associated false pleasures of anticipation. (And, falsity aside, we could by this argument rule out all the pleasures of hope: for where there is no deficiency in either power or knowledge, there is no room, conceptually, for hope.³⁷)`},
+{t:'p',x:`Finally, Socrates presents us with his characterization of the 'true' or 'pure' pleasures, arguing that they differ from all that have been rejected. First he describes certain pure aesthetic enjoyings - the contemplation of beautiful shapes and tones apart from all interest in their representational or mimetic content. This contemplation, not attended by antecedent distress, may justly be said to be valuable or good 'in virtue of itself' (*kath' hauto*) and not merely 'relatively to something' (*pros ti*). Smells are included too, 'insofar as they do not have distress as a necessary part of them' (51E).`},
+{t:'p',x:`Turning now to the pleasure of intellectual activity, Socrates insists that both learning and understanding have intrinsic value. He advances reasons for the judgment that are reminiscent of the *Republic*'s account of the marks of value. (1) They are pure: preceded by no felt lack, accompanied by a felt pleasure (51E). In no way are they necessarily mixed up with pain, for even the loss of knowledge brings no distress to the agent (52A-B). They are therefore compared to samples of the purest, most unmixed white color. (2) They have order and harmony (*emmetria*), whereas the intensely pleasant activities directed at replenishment exhibit disorder and disharmony (*ametria*) (52C). This criterion captures at least part of what the *Republic* meant by stability, viz., the absence of internal ebb and flow; at 59C stability is explicitly listed, along with purity (unmixedness) and truth, as a mark of value, and is said to be causally bound up with the stability of an activity's objects. (3) They stand much better than the bodily pleasures with regard to truth (52D). Although intellectual activities can be, and later are, further subdivided and ranked according to degrees of precision (*akribeia*), truth, and stability,³⁸ all of them clearly possess these marks of value to a high degree, and none of the pleasures connected with the body exhibits them at all.`},
+{t:'p',x:`It is important to notice that the *Philebus*, like the *Republic*, speaks of good and`},
+{t:'pg',n:'151',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`bad, high and low standpoints of value-judgment. The achievement of the dialogue is to convince the young interlocutor that he must reject a fashionable tendency to point to the natural behavior of untutored animals as a criterion of what is worthwhile in a life. He should put his trust in the 'witnessing' of intellect rather than that of our common animality. Socrates says to an acquiescent Protarchus, at the dialogue's end, that bodily pleasure would not be given first place,`},
+{t:'p',x:`> Not even if all the cows and horses and all the beasts in the world spoke for it by their pursuit of pleasure. Although most people, trusting in them as prophets trust their birds, judge that [these] pleasures are the most powerful factors in making a good life for us, and they think that the sexual behavior of beasts is a more authoritative witness than the passion for arguments which have continually prophesied under the inspiration of the philosophic muse. (67B)³⁹`},
+{t:'sec',x:'II'},
+{t:'p',x:`By this time, we can see Plato's theory of value in its general outlines; we see how it supports the life of the philosopher as against a life devoted primarily to need-relative pursuits. There are certain marks of value which philosophical activity possesses to a particularly high degree and which appetitive activities do not possess at all. Plato has argued that activities possessing these characteristics are the ones that would be selected by a rational being who judges from the appropriate rational standpoint. (He does not tell us whether the marks are jointly necessary conditions of intrinsic value, or individually sufficient; but I think his rankings of lives lend support to the former interpretation.) All this appears to be enough to undermine the 'democratic' conception of enjoying, according to which all enjoyings have an equal claim to inclusion as intrinsic values in the best life (561B).`},
+{t:'p',x:`But little has been said so far about how the valuable activities are related to those which are said to lack intrinsic value. We know that a philosopher must eat and drink enough to live. But we do not yet know whether he or she will eat and drink only enough to live, or whether a moderate, even a high, degree of sensual indulgence will be required instrumentally to foster his philosophical growth. We certainly have no reason yet to think that his life will be particularly ascetic.`},
+{t:'p',x:`Both the *Republic* and, to an even more marked degree, the *Phaedo* do, however, espouse asceticism for the philosopher. The *Phaedo*, attacking the 'so-called pleasures' of the body (60B, 64D), tells us that the good person will regard these activities with active disdain, 'except insofar as he is absolutely compelled to share them' (64E, cf. 54A, 67A, 83B). He not only does not 'honor' them, he positively 'dishonors' them (64D-E). He 'stands aside from the body insofar as he can' (65A). Four reasons for this denial of the body emerge in what follows. First, the needs of the body take up time. The less time we spend on them, the more time is free to be spent in intrinsically valuable pursuits (66C-D). Second, the bodily pursuits`},
+{t:'pg',n:'152',h:`Plato: goodness without fragility?`},
+{t:'p',x:`impair not only the quantity, but also the quality of intellectual endeavor. They render it less continuous, less powerful, less regularly able to attain to truth:`},
+{t:'p',x:`> [The soul] reasons best, presumably, whenever none of these things bothers it, neither hearing nor sight nor pain, nor any pleasure either, but whenever it comes to be alone by itself as far as possible, disregarding the body, and whenever, having the least possible communion and contact with it, it strives for that which is the case. (65C, cf. 66A, B, D, and *Rep.* 517E, where bodily pleasures and pains disturb the 'better part' and prevent it from attaining truth in dreams)`},
+{t:'p',x:`A further reason to dishonor and disregard the bodily feelings is found in the consideration that they are not accurate or clear, even as indices of real physical need. If we listen to our body every time it registers a lack, we will be deluded into eating and drinking far more than we strictly need for continued life and intellection (65B, D, E; 66D, 67A).⁴⁰ The sexual appetite is felt as a very powerful drive; indeed it is clear that Plato views it as the most powerful among the appetites. (The *Republic* speaks of it as their 'chief officer' and as a 'tyrant' in the soul of the person who attends to it - 572E, 573D, E, 574C, 575A.) And yet it is plain that the *Phaedo*'s true philosopher can completely dissociate himself from it with no danger. Finally - what Socrates calls the 'greatest and most extreme of all evils' (83C) - the appetites, whenever we attend to them at all, provide us with a constant very strong incentive to make false judgments about value and worth. They 'bewitch' the soul (81B) into thinking bodily activities more important than contemplation. In this way appetite forces the soul to view everything, as it were, through the walls of a prison which appetite itself has made (82E); the result is that the captive will 'himself be an enthusiastic collaborator in his imprisonment' (82E-83A).`},
+{t:'p',x:`Plato has now defended a way of life that is not only philosophical, but also ascetic.⁴¹ The theory of value gave us a preference for a life with a high philosophy content. Now reflection about the appetitive pursuits and their relationship to reasoning leads us to the conclusion that the philosopher ought to dissociate herself from the body and its needs as far as is compatible with continuing life, setting herself 'at odds with it at every point' (67E), 'practicing for death' (i.e. the separation of the soul from the body), admitting even as instrumentally valuable only those pursuits that satisfy what *Republic* VIII and the *Philebus* refer to as 'necessary' desires. Here, finally, we have reached the position of the end of *Republic* IX, where Socrates expresses his disdain for appetitive activity, declaring that each of us should view ourselves as identical with the intellectual soul alone. In the *Phaedo* we see, similarly, that Socrates is confident that everything that is him will survive, unscathed, the death of the body (115C-E) and its desires.`},
+{t:'sec',x:'III'},
+{t:'p',x:`We now need to look more carefully at the way in which Plato arrives at his list of the marks of value. Any theory of value that has as its consequences a plan`},
+{t:'pg',n:'153',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`of life that is so remote from what a normal human being normally pursues and values had better be closely scrutinized. How is so much ordinary value thrown away? From what perspective or standpoint is it that all our eating and drinking look as valueless as scratching an itch?`},
+{t:'p',x:`One thing is very clear: that this standpoint is nothing like that of the ordinary human being. For from the internal viewpoint of the ordinary human being the central appetitive pursuits are in important ways not like itching and scratching. If an activity possessed no intrinsic value for us, it would be rational for us to accept any substitute that would procure the same desirable results. We do use lawn-mowers, washing-machines, typewriters, thereby giving evidence that we believe the activities of mowing, washing, and handwriting to have merely instrumental value. But this is not the case with eating. We would choose, most of us, to continue to eat food rather than to take a hunger-capsule, presumably because we find eating to be, to some degree at any rate, valuable in itself, perhaps for the pleasure of taste, smell, texture, and sociability involved. Most of us, again, do not pursue sexual activity merely as a source of release from a painful tension; it is connected with other complex ends such as friendship, self-expression, and communication; there are reasons why most of us do not take the option of becoming eunuchs. The *Republic* seriously underestimates the complexity of our appetitive nature when it ignores the aesthetic side of appetitive activity and the complex connections between such activity and other valuable ends. What we find ridiculous about scratching as an activity is not simply its need-relativity. The source of our condemnation lies elsewhere. It is an indication of bodily disease or poor hygiene; it is futile, because it never completely relieves the annoying pain, but usually makes it worse; and it provides a constant very strong distraction, devoid of all positive pleasure, from other important life-activities like work and sleep. What is more, the activity lacks any positive aesthetic side; we cannot imagine an art of it, or connoisseurs of it. It is, finally, socially unacceptable and embarrassing. Eating isn't like that; sex isn't like that. We do wish to be free of itches all our life long; but how many, even abstracting from considerations of health, really wish to be free of the need to eat? In fact, we tend to be critical of persons who do view appetitive pursuits merely instrumentally, eating merely in order to still a hunger, and to praise those who are capable of entering into such activities in a way that endows them with intrinsic value: the gourmet, the connoisseur of wines, the person who can treat a sexual partner as an end in him or herself, rather than as a mere means to a state of null tension.`},
+{t:'p',x:`Again, the example that so impresses Callicles, the example of the passive homosexual, looks equally unfair. The reason this person's sexual activity is seen by the interlocutors as unfortunate is, even within their point of view, in large part a social and cultural reason. The internal point of view of a Greek gentleman distinguishes sharply between his own manly sexual pleasures (both heterosexual and homosexual) and those of this passive person. The latter is assumed to be acting under some sort of brute compulsion, in large part because the social and political associations of such activity are so strongly negative. We assume that`},
+{t:'pg',n:'154',h:`Plato: goodness without fragility?`},
+{t:'p',x:`most people wish to avoid ridicule and criticism; we pity them if they have irresistible sexual needs that put them continually at odds with their fellow human beings. For such reasons an Athenian pities the catamite. But this says nothing about sexual activity in general. From the ordinary internal viewpoint of a Callicles, in fact - as Plato was well aware - the ascetic philosopher will seem just as weird and as laughable as the passive homosexual. (In the comedies of Aristophanes, jokes at the expense of the two types are more or less equally distributed.) Furthermore, we ourselves may, as I do, find Callicles' intuitions about the example objectionable and irrational; if we do, then we will not be disposed to grant Plato his point even about this one case.`},
+{t:'p',x:`So if we see Plato's theory of value as an attempt to articulate something like an ordinary human viewpoint concerning the appetites, we must conclude that he has badly failed. He has blurred distinctions that we consider very important, denied intrinsic value where we agree in finding it.`},
+{t:'p',x:`But it is also evident that this is not, in fact, what Plato is trying to do. He readily grants that most people do ascribe intrinsic value to the bodily pleasures and to the states that are their objects. The opening of the *Republic* accurately records this fact. What he says is that this is a delusion, resulting from the deficiency of the perspective from which they make their judgments. It is only from the point of view of the 'real above' in nature, i.e. from the viewpoint of the philosopher, who can stand apart from human needs and limitations, that a really appropriate judgment about the value of activities will be made. It is this point of view that he attempts to elucidate.`},
+{t:'p',x:`We know, however, from the *Phaedo* and from the *Republic*'s earlier books that the philosopher, to be that, must first be an ascetic, dissociating him or herself from the body's needs. It is, then, from the viewpoint of one who no longer sees his characteristic human needs as genuine parts of himself that Plato rejects the associated activities as valueless, selecting others as intrinsically good. A striking example of this detached and extra-human viewpoint is found in Socrates' condemnation of the appetitive class at the end of Book IX, where he characterizes their activities using words used elsewhere in the Greek language only of the behavior of sub-human animals:`},
+{t:'p',x:`> ... Nor have they ever tasted stable and pure pleasure, but, like cattle, always looking downwards and bending over the earth and over their tables, they pasture, grazing and mounting, and, for the sake of getting more of these things they kick and butt one another with iron horns and weapons and kill one another through their insatiability. (586A-B)`},
+{t:'p',x:`This may seem grossly unfair. Surely, one might wish to argue, the pursuits of a species must be assessed from within the ways of life and the standing needs of that sort of creature. If you are such that the typical member of your species looks to you like a member of a species different from yours, then you are not the sort of ethical judge we want or need. Value simply is radically anthropocentric, and it should not count against a pursuit that the reasons for choosing it are not evident to a creature who is, or has become, different in nature from those for`},
+{t:'pg',n:'155',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`whom it is a good. The view begins to look dangerously circular: appetitive activity is rejected from a point of view that has already purified itself of appetite.`},
+{t:'p',x:`But Plato's examples have repeatedly shown us to what extent feeling and need can delude or distract the judgments of reason. The person with perverse sexual desires, for example (since most of us will agree that there are some such cases, if not the one that Plato selects) may think that he is engaging in fine or valuable activity; but from the perspective of the average human being these pursuits appear questionable. Appetite's capacity for distortion and self-justification cannot, Plato thinks, be overestimated. The *Phaedo* spoke of 'bewitchment' and of our willing collaboration in a captivity in which the prison walls are made by appetite; the *Republic* depicted appetite as a foul mud that obscures the soul's vision, so long as it has any contact with it at all (533C-D, cf. Ch. 7). Once we realize how severe an obstacle desire is to true judgment we are, as Plato sees it, led inexorably to the conclusion that really adequate judgments can be made only by getting free and clear of appetitive influence altogether. Each pleasure or pain to which we attend is like a rivet that binds the soul to a dangerous source of delusion and impurity (*Phd.* 83D). Plato assumes that no reflective person wishes to be the dupe and slave of his appetites. Even the ordinary character Cephalus, in *Republic* I, spoke with relief of his escape from the compulsions and the value-distortions caused by sexual desire. The dialogue's ominous political references remind us of other possibilities for the appetite-inspired distortion of central ethical values. The ordinary person believes that ethical judgment is obscured by the ordinary. The only solution, then, seems to be to get ourselves to a point at which we have no pressing human needs at all and can therefore survey all the alternative activities coolly, clearly, without pain or distraction, 'using pure reason itself by itself' (*Phd.* 66A) - so that eating and love-making do eventually look, to our soul's eye, like nothing more interesting than the grazing and copulating of cattle. This would be no solution, clearly, if appetite and emotion had any essential positive contribution to make to understanding or to the good life. Then - as the *Phaedrus* will acknowledge - we might have to engage ourselves with them in spite of their dangers. But Plato believes that he has already argued (in *Republic* IV) for an account of the appetites that rules this out: appetites are 'unqualified desires', brutish and unselective, totally unresponsive to judgments about the good; emotions, though somewhat more educable, tend towards dangerous violence without continual supervision.⁴²`},
+{t:'p',x:`We find, then, that the interlocutors' sense, and ours, of the obstacles to true judgment has deep roots in human experience; this experience, which does not itself presuppose Plato's standpoint, supports its choice as the best standpoint. Plato does not expect to convince everyone; but he does expect that his arguments will appeal to reflective self-critical adults who are not themselves philosophers or mathematicians. It is, after all, his brother Glaucon, soldier and gentleman, who in *Republic* VII displays enormous zeal for mathematics as a form of training that will purify the soul of the confusing influence of the ordinary. In the passage that I have placed as the epigraph to this chapter, Socrates tells him not to worry if`},
+{t:'pg',n:'156',h:`Plato: goodness without fragility?`},
+{t:'p',x:`completely unreflective people think mathematics useless: more thoughtful and perceptive people (not just ascetics or experts, plainly) will recognize the merits of his proposal. If there is any sort of circularity here, then, it is a far richer and more interesting circle than the objector has allowed. Plato is not just preaching to the converted. And this sort of circle, in which ethical content, standpoint of judgment, and a sense of the obstacles to correct judgment are all held together, supporting and illuminating one another, is likely to be found in any complex ethical theory. (In Chapter 10 §V, we shall discuss the Aristotelian analogue.)`},
+{t:'p',x:`We can now return to the cryptic transitional moment in *Republic* VI that prepared the way for a move beyond a content-neutral picture of the good. Socrates said there (and the non-philosopher Glaucon agreed) that no imperfect being, *a fortiori* no merely human being, is ever 'good measure' of anything. Anthropocentric 'laziness' is no good basis for an ethical theory. Socrates had already, in the *Protagoras*, replaced 'The human being is the measure of all things' with the uncompromising 'Knowledge [or: science] is the measure of all things' (cf. Ch. 4, pp. 115, 120). Now we learn his considered view about what this requirement comes to: from now on, only the 'perfect' (complete, needless) will be 'good measure' of value for the ideal city: for only from the undistracted viewpoint of perfection can truth be seen. Having agreed as much, the interlocutors move away from their former content-neutral picture of the good life, which rested on a merely human consensus, and strive towards the pure viewpoint of needlessness. Book IX is the result.`},
+{t:'p',x:`This distinction between value relative to a limited being and real intrinsic value (here taken to coincide with that which a perfect, non-limited rational being would select) is, we might now say, the most general and most basic form of the contrast which we have been exploring. It is sufficient to explain the value-distinctions of our other passages, and it can also be invoked to explain judgments, like the *Philebus* judgments of aesthetic value, which could not be explained by appeal to instrumentality or pain-relativity alone. Let us digress for a minute to explore that passage.`},
+{t:'p',x:`The *Philebus*, as we saw, rejects all representational painting and sculpture, e.g. the forms of animals, and defends the beauty of the pure, simple shapes and colors. Plato's point here seems to be that insofar as it is the representational features of a painting or sculpture that engage our attention, we are responding from the point of view of anthropocentric interests and needs. Imagine a perfect, disembodied, needless god looking at a Praxiteles statue of an athlete. Its judgments of aesthetic value might turn out to coincide with ours; but we feel that this would be a mere coincidence, so different would be the contexts of the judgment in the two cases. We delight in the fine sensitive depiction of the strength and responsiveness of the human form, the way the sculptor has both captured our likeness and expressed what we find marvelous, strong, or admirable in ourselves. The perfect god would not see anything so wonderful about its being a particular type of body. It would be most likely to assess the sculpture as a pure`},
+{t:'pg',n:'157',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`form or shape, judging it successful insofar as it exhibited a composition that was, in the abstract, pleasing or delightful. It would look for the pure qualities of form, color, and arrangement, refusing to value, as such, any of the features of the object that link it with our practical interest in our species and our environment. Plato urges us to see, by assuming, insofar as we can, the standpoint of this god, that our human interest in the representational features of painting and sculpture leads to impure judgment, blinding us to the true or pure value that they offer. Similarly, in music, he urges us to purge ourselves of our interest in human meaning, speech, emotion, and to admire the 'smooth, clear sounds, the ones that produce a single pure tone' (51D). Contingent, species-relative value is not intrinsic value. As the same point is put by the formalist critic Hanslick, 'The beautiful is not contingent upon nor in need of any subject introduced from without, but...consists wholly of sounds artistically combined.'⁴³`},
+{t:'p',x:`Plato's standpoint of perfection is not immediately available to any creature who wishes to assume it. It is a long and difficult matter to learn to detach ourselves from our human needs and interests, or to get to a point at which we can do so at will. Therefore, if Plato is really committed to a model of rational evaluation utilizing such a standpoint, we would expect him to provide us with a model of education to accompany it.`},
+{t:'p',x:`This expectation is confirmed. The *Phaedo* describes an entire life that is a 'practice' for the separation of the soul from the body. And the *Republic* is, for more than half its length, a book about education, i.e., about the strategies for 'turning the soul around' from its natural human way of seeing to the correct way. I shall not even attempt here to offer an account of all the stages in the soul's development as it describes them. But I want to point briefly to a feature of Plato's treatment of poetry in the account of early moral education that has, as far as I know, received very little attention, a feature whose importance we can now appreciate in the light of our interpretation.`},
+{t:'p',x:`It is well known that in his purge of poetry in Books II-III, Plato excludes the representation of several of the human emotions most frequently treated by poetic art: grief, passionate love, fear. It is less noticed that these emotions are ruled out by an argument that assumes the standpoint of perfection and asks, from this standpoint, about their value. For the true hero, Socrates argues, or for the god, it is not appropriate to grieve deeply for the death of a mere mortal: no really lofty being will seriously mind the loss of one small portion of the perceptible world. Therefore, since our literature should provide a moral ideal for weaker men, we must not include these and other ungodlike emotions in it (388B-E). In an earlier passage, a similar appeal to what befits the god is used to rule out literature that depicts its lofty or divine heroes as telling falsehoods. Socrates asks his interlocutors what reasons a perfect and needless being could have for telling falsehood; concluding that there are none, he concludes also that the figures who are to be models for us should not be depicted engaging in this activity: 'God is altogether simple and true in deed and word, and neither changes himself nor deceives others' (382E). In this appeal to what befits the god, Socrates both uses`},
+{t:'pg',n:'158',h:`Plato: goodness without fragility?`},
+{t:'p',x:`a standpoint of perfection to determine an aesthetic/moral value and constructs for the young citizens, in speech, a representation of that standpoint as a moral ideal. We should imitate beings who are completely without merely human needs and interests, in order to cultivate our own potential for objective rationality. Therefore our literature should depict those beings and their deliberations.⁴⁴`},
+{t:'sec',x:'IV'},
+{t:'p',x:`I have argued that Plato moves beyond Book IV's formal agreement about the shape of rational life plans to provide an independent theory of value that specifies the best content for a rational life. The theory consists, first, of an account of the marks of intrinsic value and of the difference between intrinsic value and merely species-relative value; second, of an epistemology of value, which describes to us the procedures by which genuinely objective judgments of value may be made. The best life will be a life maximally devoted to contemplative, scientific, and aesthetic pursuits, in which all other activities have a merely instrumental value at best.⁴⁵ It is important to stress at this point that the activities chosen by the philosopher are supposed to be valuable intrinsically, not just because the philosopher chooses them. His pursuits are good because his choice responds to real value, not just because he judges from the appropriate standpoint. If his choices were constitutive of value in and of themselves, then he and his choices would begin to look arbitrary.⁴⁶ But Plato believes that this ideal of the conditions of evaluation offers the best route by which mortal beings can get access to the real value that would be there, and be value, whether they existed or not.`},
+{t:'p',x:`According to this view, the political life of the philosopher can count as intrinsically valuable on the grounds that it realizes and contemplates stability and harmony in the city; also on the grounds that it is occupied with making precise and true judgments concerning the elusive realities of the empirical world. But it is nonetheless no surprise that the philosophers need to be compelled to take it up, since it possesses the marks of intrinsic value to a lesser degree than does their contemplative life. Plato's account of true value does, then, permit one sort of serious contingent value conflict to arise, as the demands of philosophical contemplation pull against the claims of rulership. To this extent its commitments to singleness and unity appear less whole-hearted than those of the *Protagoras*. But we should not conclude that Plato's intense focus on the stability of individual values has led him to ignore problems arising from their interrelationship. We have already spoken of the way in which Book IV constructed an internally harmonious life ruled by reason. Throughout the *Republic*, and especially in Book V, there is enormous emphasis on the internal unity and conflict-free harmony that will be effected for each individual by the city's education. And we can see why this should be so, if we consider once again the relationship between these two problems. A human being who is weaned from all attachment to internally unstable pursuits such as love, sexual activity, power-seeking, and money-making is automatically at the same time rid of many of the most common grounds of`},
+{t:'pg',n:'159',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`value conflict. In part, the superior harmony of the philosopher's life results directly from this reduction in the number of his or her commitments. The pursuit of mathematics and the pursuit of love will not come into conflict for a mathematician who does not care about love or a lover who does not care about mathematics. But the philosopher or mathematician's particular choice of content contributes powerfully, too, to his harmonious condition. He chose these pursuits precisely because they were always available and did not require any special conditions for their exercise. He can think about theorems in all kinds of circumstances; they are always available for his activity, regardless of his political circumstances, regardless of the activities and attachments of other human beings. So how often will he be forced to make a painful choice? The self-sufficiency of individual pursuits leads, then, to a reduction in conflict.`},
+{t:'p',x:`The few potential conflicts remaining in this life are solved by an ingenious combination of moral education and political engineering. In Book V, Socrates turns his attention to the family and to private property, two of the most common grounds of serious value conflict. And he announces his radical and notorious solution. The city will not exactly eliminate either ownership or the family: but it will spread these around in common among members of the city. There is no city-family conflict if, for every young citizen, the whole city simply is the family; if any other kind of family tie is unknown to it. Again, there is no conflict between what is 'my own' and what is the city's, if all property is held in common. Plato, unlike Creon, perceives that such radical stratagems cannot simply be imposed upon people who have been brought up another way; he knows that the existing city is not a unity, but a plurality. All of human experience must therefore be transformed, beginning with the baby's experience of the mother's breast. Farmed out to interchangeable wet nurses, prevented from forming special or intimate bonds with particular parental figures, and later with particular sex partners, these citizens will learn in every part of their experience to treat all citizens as 'alike and beloved friends', interchangeable exemplars of the same values.⁴⁷ The *Symposium* appears to carry this one step further, showing us how the good person learns to regard the value of persons as itself fully interchangeable with the value of institutions and sciences. And this further move offers not exactly a solution to the philosopher-ruler's dilemma, but at least a marked mitigation: for if his choice between contemplation and rule is just the choice between loving and contemplating two different sources of the same value, then the choice looks far less acutely painful.`},
+{t:'p',x:`These strategies chosen to minimize conflict enhance, at the same time, the stability of single pursuits. For no other type of family attachment, for example, would be as stable, as easily acted on in all kinds of circumstances, as this widespread devotion to an enormous reservoir of citizens, loved for their civic virtue rather than for their personal selves. In this way, Plato, once again solves our two problems together, with a single solution.`},
+{t:'p',x:`There remains one sphere of ineliminable non-interchangeability. The connec- tion that each being has with the feelings of his or her own body cannot be`},
+{t:'pg',n:'160',h:`Plato: goodness without fragility?`},
+{t:'p',x:`generalized or spread around as can other things formerly 'one's own'. No matter what the legislator does, the sensations of this piece of flesh have a connection with me that is altogether different from the connection I have with that other piece of flesh over there. Plato recognizes this as a deep problem. In the related passage in the *Laws* he tells us that teachers of the young will do whatever lies in their power to undermine this special love of something irreducibly one's own:`},
+{t:'p',x:`> The notion of the private (*idion*) will have been, by every possible stratagem, completely uprooted from every sphere of life. Everything possible will have been devised to make even what is by nature private, such as eyes and hands, common in some way, in the sense that they will seem to see and hear and act in common. (739C-D)`},
+{t:'p',x:`Nature blocks the legislator's full success. The best he can do is to teach us again and again to disregard these special feelings, to remind ourselves that this feeling thing is not really us, this nature not our real nature. That we are single-natured rational souls, only contingently located in that thing. And now we see a further motive for his so teaching. For the body is not only the biggest obstacle to stable life and to true evaluation; it is also the most dangerous source of conflict, and therefore the biggest obstacle to impartial and harmonious civic justice. (Cf. Ch. 6, pp. 181, 196-7; Ch. 7, p. 221; Ch. 12, p. 353).`},
+{t:'sec',x:'V'},
+{t:'p',x:`I have said that it is not a strong objection to this value-theory that it does not faithfully reflect the ordinary human's intuitive view of her practices and pursuits, since, according to Plato, no ordinary person, especially in a liberal democracy, has had the education that would sufficiently cultivate his or her potential for objective rationality. But it is, of course, still incumbent on Plato to show us, ordinary as we are, that this ideal of rational valuing and this standpoint of perfection are worthwhile goals for a human being to pursue. He must give us some reason to want to attain his ideal, or to think that it is one to whose pursuit we are already in some way committed. We might object, in particular, that the external god's-eye perspective is neither attractive, in that it requires the denigration of so much that we value, nor important, in that it is not relevant to the living of our human lives. Perhaps it is not even available: the world and its value cannot be found and known in isolation from our human interpretations and ways of seeing, shaped as they are by our interests, concerns, and ways of life. Any objectivity about value that is worth talking about, perhaps any about which it is even possible to talk, must be found within the human point of view and not by attempting, vainly, to depart from it.`},
+{t:'p',x:`I shall not develop these objections further at this point. They are complex, and a full understanding of them would require, among other things, a detailed examination of Aristotle's ethical views to which we shall turn in Chapter 8. I shall simply say here that Plato has not in fact ignored this sort of objection; and the question of motivation is one to which he has devoted a great deal of`},
+{t:'pg',n:'',h:``},
+{t:'p',x:`The Republic: true value and the standpoint of perfection 161`},
+{t:'p',x:`consideration. His answer has what we might call a negative and a positive strand, the two being intimately connected. On the negative side, Plato believes that he can show us that much that is valued in the internal human viewpoint on the world is, if we reflect seriously, a source of intolerable pain for a rational being. Sufficient motivation for the ascent to the philosopher's perspective is already present to us, in the tumult and disorder of our empirical lives. One central task of the philosopher will be to display the intolerable aspects of our lives to us in an unavoidably clear way, at the same time displaying the philosopher's ascent as a remedy for that torment. I believe (and will argue in Chapter 6) that this is the task undertaken in Plato's *Symposium*; and we can see similar considerations at work in *Republic* I, with its ominous foreshadowing of appetitive violence, and VIII, with its devastating portrayal of the unstable lives of those who would have constituted the bulk of Plato's audience.`},
+{t:'p',x:`The positive strand or aspect of Plato's answer to the motivational question is suggested in *Republic* VI. Speaking of the grasp of the truth about the good, a non-perspectival truth that is what it is independent of all human interests, Socrates says, 'This, indeed, is what every soul pursues, and for the sake of this it does everything that it does, divining obscurely what it is' (505E).⁴⁸ Again, in the *Philebus*, Socrates urges us to consider 'whether there is in our souls some natural power of loving the truth and doing everything for the sake of that' (58D4-5, cf. 'the passion for arguments', 67B). Mathematical and philosophical reasoning are forms of value to which we, alone among mortal beings, are deeply drawn, by some kind of fortunate innate endowment (cf. *Epinomis* 978B, *Phaedrus* 250A): our psychology has a natural affinity with the truly good. We find mathematics beautiful and exciting because, by good luck, we fit with real beauty.`},
+{t:'p',x:`We might try to see this positive answer as just another way of putting the negative point: we are motivated to seek true, stable value because we cannot live with the pain and instability of our empirical lives. This was Nietzsche's diagnosis of Platonic value-theory. In a fragment entitled 'Psychology of metaphysics', he writes of the motivations underlying the Platonic defense of true value:`},
+{t:'p',x:`> It is suffering that inspires these conclusions: fundamentally they are desires that such a world should exist... To imagine another, more valuable world is an expression of hatred for a world that makes one suffer: the ressentiment of metaphysicians is here creative.⁴⁹`},
+{t:'p',x:`But this deep and no doubt correct insight into a part of the appeal of Plato's arguments does not do justice to their complexity. Even for Nietzsche this would not have sufficed as an account of Plato's own self-understanding. Plato has argued that the difference between true value and everything else is precisely that it is not simply need-relative, that it is something that a being who had never experienced suffering or lack would still have reason to choose. We are fortunate enough to share with such beings this pure positive motivation, which is, to some extent, independent of our negative motivation. From within our human lives, even disregarding, for the moment, their pain, we have a deep and positive natural`},
+{t:'pg',n:'162',h:`Plato: goodness without fragility?`},
+{t:'p',x:`desire to get at something more perfect than the merely human. (It is fortunate indeed that we do have this desire; for if we did not we would not have some different good, we would just be cut off from the only good there is.⁵⁰) All of this, Plato would say, is actually a part of the human point of view, since the human being is by nature a being that seeks to transcend, through reason, its merely human limits. What Nietzsche leaves out is that mathematical, scientific, and philosophical reasoning are enormously beautiful and compelling to human souls: and not only to the soul of a mathematical genius like the young Theaetetus, but to the gentleman Glaucon; to Socrates; to every pupil who entered the Academy, over whose door stood (the story goes) the inscription 'Let no one enter here who does not pursue geometry'; to many of us, Plato believes, if we will think hard enough about what we really love. To Epicureans who viewed science and philosophy only as means of assuaging human pain, the Platonist Plutarch replied appropriately that they omit what Plato saw, the joy and pleasure of pure reasoning:`},
+{t:'p',x:`> They push the pleasures of mathematics out the door. And yet... the pleasures of geometry and astronomy and harmonics have an intense and manifold lure, in no way less powerful than a love charm; they draw us to them using theorems as their magic spells... No man yet, on having intercourse with the woman he loves, has been so happy that he went out and sacrificed an ox; nor has anyone ever prayed to die on the spot if he could only have his fill of royal meat or cakes. But Eudoxus prayed to be consumed in flames like Phaethon if he could only stand next to the sun and ascertain the shape, size, and composition of the planets; and when Pythagoras discovered his theorem he sacrificed an ox, as Apollodorus records. (That Epicurus Makes a Pleasant Life Impossible, 1093D-1094B, trans. Einarson)⁵¹`},
+{t:'p',x:`The blessed life, Plato insists, is also blessedly happy. It is not best because it is happy; it would be best quite apart from its happiness. But how wonderful it is that we pursue the best with such joy.`},
+{t:'p',x:`If all this is true of us, Plato could now argue, then it may be not he himself, but these criticisms of his work that misrepresent the internal human viewpoint. What the imaginary objector does, Plato would say, is to simplify and flatten human moral psychology by omitting a longing that is in tension with many of the other things that we are and do. What some of Plato's contemporary interpreters do, as they reconstruct Plato's theory, is to ask, in a similar way, whether something acceptable to contemporary democratic humanism might be salvaged if we reject the unfashionable value-talk of the later books. But in doing this, though they may indeed render Plato's thought more palatable to the people who are, and were, Plato's audience, they conceal Plato's powerful defense of a more unsettling view which, as he is prepared to argue, is both more correct and answers more adequately to our deepest desires, the desires which fortunately link us to the true good. If he is right about the complexity of our nature - and I think he has at least a serious chance of being right - when we simplify and flatten Plato's arguments we are at the same time avoiding part of our own psychological complexity. There are a number of dangers in such a procedure. Some of these`},
+{t:'pg',n:'163',h:`The Republic: true value and the standpoint of perfection`},
+{t:'p',x:`are historical: we lose sight of some of Plato's views; we cease to understand the force of Aristotle's criticisms of Plato, since Plato will now look very much like Aristotle;⁵² we cease, too, to see why and how the *Phaedo* so deeply moved and influenced Kant. Equally deep are the philosophical dangers: by reducing Plato's position to a more familiar one, we lose the chance to work through and seriously examine a distinctive moral position that powerfully questions our own. But perhaps the deepest danger in a criticism that seeks to soften and humanize Plato is that we may, with its help, be encouraged to cease to see and feel what he saw and powerfully recorded, the humanness of denial and dissatisfaction, the depth of our human longing for something better than what we are. Plato would say that to cease to see and feel these things would be to cease, in some way, to be human. And it is striking that Nietzsche, anti-Platonist though he was, supports Plato's intuitions here. His description of the so-called 'last man' in *Zarathustra* predicts for the future of human morality in European bourgeois democracy the extinction of recognizable humanity, precisely through the extinction of the Platonic longing for self-transcendence. 'The time of the most despicable man is coming,' says Zarathustra, 'he that is no longer able to despise himself.' As one might expect, Zarathustra's audience, much like some of Plato's contemporary critics, ignored the fact that his speech was a praise of the 'great longing' and called out, 'Give us this last man'.⁵³`},
+{t:'p',x:`*  *  *`},
+{t:'p',x:`In the *Republic*, Plato answered questions about education and motivation by describing an ideal city in which the best possible education for objective rationality could be realized. It was crucial in this city that the 'turning round' of the soul begin 'straight from childhood' (519A), in order that the soul of the young citizen should be freed from the 'leaden weights' of the bodily pleasures that force its vision downward (519B). Plato also concludes, however, that this is a city that will never come into being; and he urges private individuals to aim at the life of the city without its supportive context (591E-592B). In less ideal circumstances, where we begin with adults who already have powerfully fettered souls, the educational and motivational process must be negative as much as positive: it must strike off the lead weights as well as inspiring the soul to look aloft. To commend his account of true non-pain-relative value to democratic readers (ancient or modern), the philosopher, ironically, will need to appeal to their sense of pain and constraint, permitting them to use the pain of the lead weights as a reason for the choice to throw them off. This does not make philosophy itself pain-relative, little more than a convalescence: for it would still be valuable from anywhere in the universe, and to any rational soul at all, regardless of pain. But we must be made conscious of our pain before we can be brought to a point at which we are ready to pursue a way of life that involves giving up, or radically revising, much that we now value.`},
+{t:'p',x:`All of our appetites are lead weights. But we can have no doubt about which,`},
+{t:'pg',n:'164',h:`Plato: goodness without fragility?`},
+{t:'p',x:`for Plato, is the heaviest. Sexual desire, the 'chief officer' of the appetites and 'tyrant' of the soul, is singled out again and again. The job of freeing us from the burden of sexual longing and its associated loves of mutable individual persons will be a complicated and difficult one. The therapeutic philosopher will need here above all to work with negative as well as positive appeals, in order to counter the strength of our interest.⁵⁴`}
+
+  ]
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   ②  INTERFACE STRINGS — one place for every visible label.
+       Translate this block to change the whole UI language.
+   ══════════════════════════════════════════════════════════════════ */
+var UI = {
+  searchPlaceholder : 'Look up a word or phrase…',
+  searchLabel       : 'Search',
+  dictionary        : 'Dictionary',
+  dictionaryHint    : 'Turn on, then tap or hover a word',
+  bookmarks         : 'Bookmarks',
+  prev              : 'Previous',
+  play              : 'Play',
+  pause             : 'Pause',
+  next              : 'Next',
+  ready             : 'Ready',
+  synthesizing      : 'Synthesizing',
+  narrating         : 'Narrating',
+  paused            : 'Paused',
+  selection         : 'Selection',
+  unitSentence      : 'Sentence',
+  unitParagraph     : 'Paragraph',
+  modelFlash        : 'Flash',
+  modelPro          : 'Pro',
+  explain           : 'Explain',
+  listen            : '▶  Listen',
+  findInText        : '↓  Find in text',
+  explaining        : 'Looking it up…',
+  addBookmark       : 'Bookmark current position',
+  noBookmarks       : 'No bookmarks yet.',
+  noteLabel         : 'note',
+  dictGeneral       : 'Dictionary meaning',
+  dictContextual    : 'In this passage',
+  dictParaphrase    : 'In plain English',
+  freqLabel         : 'How common this word is',
+  highlight         : 'Highlight',
+  eraseHighlight    : 'Remove highlight',
+  hdgBookmarks      : 'Bookmarks',
+  hdgHighlights     : 'Highlights',
+  noHighlights      : 'No highlights yet.',
+  backup            : 'Backup & restore',
+  backupHint        : 'Copy this text somewhere safe. Paste it back and press Restore to bring your bookmarks and highlights back.',
+  copy              : 'Copy',
+  copied            : 'Copied',
+  restore           : 'Restore',
+  restored          : 'Restored',
+  badBackup         : 'That backup could not be read.',
+  storageWarn       : 'This page cannot save to the browser here, so your marks will be lost when you close it. Use Backup & restore below to keep them.',
+  noscript          : 'This reader needs JavaScript for the audio player and the dictionary.'
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   ③  GEMINI API — inside Gemini Canvas / AI Studio leave API_KEY as "".
+       The runtime injects it and the call is covered by your plan.
+   ══════════════════════════════════════════════════════════════════ */
+var API_KEY    = 'AIzaSyC6bcg017Ml1hfoMvp9dWfmmJEkQ0s35mE';
+var API_ROOT   = 'https://generativelanguage.googleapis.com/v1beta/models/';
+/* Model IDs get retired without warning — a request to a dead one comes back
+   404 "no longer available". So each role lists candidates newest-first and the
+   app walks down the list until one answers, then remembers the winner.
+   Add newer IDs to the front as Google ships them; nothing else needs editing. */
+var TEXT_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+var TTS_MODELS  = {
+  flash: ['gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'],
+  pro:   ['gemini-2.5-pro-preview-tts', 'gemini-3.1-flash-tts-preview']
+};
+var VOICE      = 'Aoede';
+var TTS_STYLE  = 'Read the following aloud as a calm, articulate audiobook narrator. Unhurried pace, clear diction, natural prosody.\n\n';
+var PARA_MAX   = 1400;
+var SEL_MAX    = 2500;
+var SCROLL_TOL = 30;     /* px of scroll tolerated before popovers close */
+
+/* ══════════════════ nothing below needs editing ══════════════════ */
+
+var state = {
+  dict:false, panelOpen:false, bakOpen:false, bookmarks:[], highlights:[],
+  gran:'sent', ttsModel:'flash',
+  mode:'article', unit:-1, playing:false,
+  status:'ready', message:'',
+  sel:null, tip:null
+};
+
+var SENTS = [], DISP = [], ITAL = [], UNITS = [];
+var audioCache = new Map(), explainCache = new Map();
+var audioEl = new Audio();
+var hoverTimer = null, selTimer = null, foundTimer = null;
+var activeWord = null, anchorY = 0;
+var CAN_HOVER = window.matchMedia ? window.matchMedia('(hover:hover) and (pointer:fine)').matches : true;
+
+var appEl = document.getElementById('app'),
+    tipEl = document.getElementById('tip'),
+    panelEl = document.getElementById('panel'),
+    selbar = document.getElementById('selbar'),
+    metaEl = document.getElementById('pmeta'),
+    playEl = document.getElementById('playBtn'),
+    dictEl = document.getElementById('dictBtn'),
+    qEl = document.getElementById('q');
+
+/* ---------------- text helpers ---------------- */
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+var WORD_RE = /[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'’\-]*/g;
+function wordize(text){
+  var out = '', last = 0, m; WORD_RE.lastIndex = 0;
+  while ((m = WORD_RE.exec(text)) !== null) {
+    out += esc(text.slice(last, m.index));
+    out += '<span class="w" data-w="' + esc(m[0]) + '">' + esc(m[0]) + '</span>';
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
+function bodyHtml(t){ return state.dict ? wordize(t) : esc(t); }
+
+var ABBR_RE = /(?:^|[\s(])(?:cf|i\.e|e\.g|etc|Ch|Chs|n|no|nos|vs|Mr|Mrs|Ms|Dr|St|p|pp|esp|Prof|viz|al|ed|eds|trans|fig|vol)\.$/i;
+function splitSentences(text){
+  var out = [], start = 0, i, j, k;
+  for (i = 0; i < text.length; i++) {
+    var c = text.charAt(i);
+    if (c !== '.' && c !== '!' && c !== '?') continue;
+    j = i + 1;
+    while (j < text.length && '.!?)]"\'’”'.indexOf(text.charAt(j)) > -1) j++;
+    if (j >= text.length) break;
+    k = j; while (k < text.length && /\s/.test(text.charAt(k))) k++;
+    if (k === j) continue;
+    if (!/[A-Z"'(“‘]/.test(text.charAt(k))) continue;
+    var cand = text.slice(start, j);
+    if (ABBR_RE.test(cand)) continue;
+    if (cand.trim()) out.push(cand.trim());
+    start = k; i = k - 1;
+  }
+  var tail = text.slice(start).trim();
+  if (tail) out.push(tail);
+  return out.length ? out : [text];
+}
+/* Pull *emphasis* out of a sentence: returns the clean text plus the character
+   ranges that were italic. A lone asterisk (a footnote reference such as
+   "(kalē)*") has no partner, so the regex leaves it alone as literal text. */
+var EM_RE = /\*([^*\s][^*]*?)\*/g;
+function stripEm(s){
+  var out = '', its = [], last = 0, m;
+  EM_RE.lastIndex = 0;
+  while ((m = EM_RE.exec(s)) !== null) {
+    out += s.slice(last, m.index);
+    var a = out.length;
+    out += m[1];
+    its.push([a, out.length]);
+    last = m.index + m[0].length;
+  }
+  return { t: out + s.slice(last), i: its };
+}
+
+/* SENTS = what gets spoken.  DISP = what gets printed.  ITAL = italic ranges.
+   Page rules and section numbers carry no sentences, so they are never read. */
+function buildSents(){
+  SENTS = []; DISP = []; ITAL = [];
+  ARTICLE.blocks.forEach(function(b){
+    if (b.t === 'pg' || b.t === 'sec') {
+      SENTS.push([]); DISP.push([]); ITAL.push([]);
+    } else if (b.t === 't') {
+      var spoken = [], shown = [], its = [], h = b.head || ['A','B'];
+      b.rows.forEach(function(r){
+        [0,1].forEach(function(k){
+          var e = stripEm(r[k]);
+          spoken.push(h[k] + '. ' + e.t + '.'); shown.push(e.t); its.push(e.i);
+        });
+      });
+      SENTS.push(spoken); DISP.push(shown); ITAL.push(its);
+    } else {
+      var sp = [], sh = [], it = [];
+      splitSentences(b.x).forEach(function(s){
+        var e = stripEm(s);
+        sp.push(e.t); sh.push(e.t); it.push(e.i);
+      });
+      SENTS.push(sp); DISP.push(sh); ITAL.push(it);
+    }
+  });
+}
+function blockText(bi){
+  var b = ARTICLE.blocks[bi];
+  if (!b) return '';
+  if (b.t === 'pg')  return 'p. ' + (b.n || '') + (b.h ? ' — ' + b.h : '');
+  if (b.t === 'sec') return 'Section ' + b.x;
+  return (DISP[bi] && DISP[bi].length) ? DISP[bi].join(' ') : (b.x || '');
+}
+function cleanTts(s){ return s.replace(/[²³¹⁰-₟]/g,'').replace(/\s+/g,' ').trim(); }
+
+function buildUnits(){
+  UNITS = [];
+  SENTS.forEach(function(sents, bi){
+    if (state.gran === 'sent') {
+      sents.forEach(function(s, si){ UNITS.push({ b:bi, s0:si, s1:si, text:cleanTts(s) }); });
+    } else {
+      var s0 = 0, buf = '';
+      sents.forEach(function(s, si){
+        if (buf && (buf + ' ' + s).length > PARA_MAX) {
+          UNITS.push({ b:bi, s0:s0, s1:si - 1, text:cleanTts(buf) }); s0 = si; buf = s;
+        } else buf = buf ? buf + ' ' + s : s;
+      });
+      if (buf) UNITS.push({ b:bi, s0:s0, s1:sents.length - 1, text:cleanTts(buf) });
+    }
+  });
+}
+
+/* ---------------- bookmark persistence ---------------- */
+/* Bookmarks and highlights live together under one key.
+
+   Sandboxed frames (Gemini Canvas, some in-app browsers) hand the page an
+   opaque origin, where localStorage either throws or is wiped the moment the
+   frame goes away — which is why marks vanish when the app is closed. We probe
+   for real, readable storage at boot; if it is not there we say so and fall
+   back to the Backup & restore box, which works everywhere. */
+var STORE = 'reader:' + ARTICLE.id;
+var STORAGE_OK = false;
+
+function probeStorage(){
+  try {
+    var k = STORE + ':probe';
+    window.localStorage.setItem(k, '1');
+    var ok = window.localStorage.getItem(k) === '1';
+    window.localStorage.removeItem(k);
+    return ok;
+  } catch (e) { return false; }
+}
+function sanitize(data){
+  var nb = ARTICLE.blocks.length;
+  var b = Array.isArray(data && data.b) ? data.b : [];
+  var h = Array.isArray(data && data.h) ? data.h : [];
+  return {
+    b: b.filter(function(n){ return typeof n === 'number' && n >= 0 && n < nb; }),
+    h: h.filter(function(x){
+         return x && typeof x.b === 'number' && typeof x.s === 'number' &&
+                typeof x.a === 'number' && typeof x.z === 'number' &&
+                x.z > x.a && DISP[x.b] && typeof DISP[x.b][x.s] === 'string' &&
+                x.z <= DISP[x.b][x.s].length;
+       }).map(function(x){
+         return { b:x.b, s:x.s, a:x.a, z:x.z, c:/^[ygpb]$/.test(x.c) ? x.c : 'y' };
+       })
+  };
+}
+function loadAll(){
+  var raw = null;
+  try { raw = window.localStorage.getItem(STORE); } catch (e) {}
+  var data = {};
+  if (raw) { try { data = JSON.parse(raw); } catch (e) { data = {}; } }
+  var clean = sanitize(data);
+  state.bookmarks = clean.b;
+  state.highlights = clean.h;
+}
+function saveAll(){
+  try { window.localStorage.setItem(STORE, JSON.stringify({ b:state.bookmarks, h:state.highlights })); }
+  catch (e) {}
+}
+function exportText(){
+  return JSON.stringify({ id:ARTICLE.id, b:state.bookmarks, h:state.highlights });
+}
+function importText(txt){
+  var data;
+  try { data = JSON.parse(txt); } catch (e) { return false; }
+  if (!data || (!Array.isArray(data.b) && !Array.isArray(data.h))) return false;
+  var clean = sanitize(data);
+  state.bookmarks = clean.b;
+  state.highlights = clean.h;
+  sortHighlights();
+  saveAll();
+  return true;
+}
+
+/* ---------------- render ---------------- */
+/* ---------------- highlighter ---------------- */
+function sortHighlights(){
+  state.highlights.sort(function(x, y){ return x.b - y.b || x.s - y.s || x.a - y.a; });
+}
+function hlFor(bi, si){
+  return state.highlights.filter(function(h){ return h.b === bi && h.s === si; })
+                         .sort(function(x, y){ return x.a - y.a; });
+}
+/* Cut the sentence at every highlight and italic boundary, then decide the
+   wrappers segment by segment. Doing it this way keeps overlapping bands legal:
+   no tag ever has to close across another tag's edge. Highlight bands are
+   snapped to word edges, so the dictionary's .w spans are never cut in half. */
+function segHtml(text, hs, its){
+  var cuts = [0, text.length];
+  hs.forEach(function(h){ cuts.push(h.a, h.z); });
+  its.forEach(function(r){ cuts.push(r[0], r[1]); });
+  cuts = cuts.filter(function(v){ return v >= 0 && v <= text.length; })
+             .sort(function(a, b){ return a - b; })
+             .filter(function(v, i, a){ return i === 0 || v !== a[i - 1]; });
+
+  var out = '';
+  for (var i = 0; i < cuts.length - 1; i++) {
+    var p = cuts[i], q = cuts[i + 1];
+    if (q <= p) continue;
+    var color = null;
+    for (var j = 0; j < hs.length; j++) if (hs[j].a <= p && hs[j].z >= q) { color = hs[j].c; break; }
+    var ital = false;
+    for (var k = 0; k < its.length; k++) if (its[k][0] <= p && its[k][1] >= q) { ital = true; break; }
+    var piece = bodyHtml(text.slice(p, q));
+    if (ital)  piece = '<em>' + piece + '</em>';
+    if (color) piece = '<mark class="hl ' + color + '">' + piece + '</mark>';
+    out += piece;
+  }
+  return out;
+}
+function sentSpan(bi, si, disp){
+  var hs = hlFor(bi, si);
+  var its = (ITAL[bi] && ITAL[bi][si]) || [];
+  var inner = (hs.length || its.length) ? segHtml(disp, hs, its) : bodyHtml(disp);
+  return '<span class="s" data-b="' + bi + '" data-s="' + si + '">' + inner + '</span>';
+}
+
+var LETTER = /[A-Za-zÀ-ɏ'’\-]/;
+function snapToWords(text, a, z){
+  while (a > 0 && LETTER.test(text.charAt(a - 1))) a--;
+  while (z < text.length && LETTER.test(text.charAt(z))) z++;
+  while (a < z && /\s/.test(text.charAt(a))) a++;
+  while (z > a && /\s/.test(text.charAt(z - 1))) z--;
+  return [a, z];
+}
+/* Turn the live DOM selection into per-sentence character ranges. */
+function captureRanges(){
+  var sel = window.getSelection ? window.getSelection() : null;
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) return [];
+  var range = sel.getRangeAt(0), out = [];
+  var spans = appEl.querySelectorAll('.s');
+  for (var i = 0; i < spans.length; i++) {
+    var sp = spans[i];
+    if (!range.intersectsNode(sp)) continue;
+    var bi = Number(sp.getAttribute('data-b')), si = Number(sp.getAttribute('data-s'));
+    var text = (DISP[bi] && DISP[bi][si]) || sp.textContent;
+    var a = 0, z = text.length, r;
+    if (sp.contains(range.startContainer)) {
+      r = document.createRange(); r.selectNodeContents(sp);
+      try { r.setEnd(range.startContainer, range.startOffset); a = r.toString().length; } catch (e) {}
+    }
+    if (sp.contains(range.endContainer)) {
+      r = document.createRange(); r.selectNodeContents(sp);
+      try { r.setEnd(range.endContainer, range.endOffset); z = r.toString().length; } catch (e) {}
+    }
+    a = Math.max(0, Math.min(a, text.length));
+    z = Math.max(0, Math.min(z, text.length));
+    if (z > a) out.push({ b:bi, s:si, a:a, z:z });
+  }
+  return out;
+}
+/* Clip anything already sitting under `r`; pass a colour to lay a new band down. */
+function applyBand(r, color){
+  var kept = [];
+  state.highlights.forEach(function(h){
+    if (h.b !== r.b || h.s !== r.s || h.z <= r.a || h.a >= r.z) { kept.push(h); return; }
+    if (h.a < r.a) kept.push({ b:h.b, s:h.s, a:h.a, z:r.a, c:h.c });
+    if (h.z > r.z) kept.push({ b:h.b, s:h.s, a:r.z, z:h.z, c:h.c });
+  });
+  if (color) kept.push({ b:r.b, s:r.s, a:r.a, z:r.z, c:color });
+  state.highlights = kept;
+}
+function highlightSelection(color){
+  var ranges = captureRanges();
+  if (!ranges.length) return;
+  ranges.forEach(function(r){
+    var text = (DISP[r.b] && DISP[r.b][r.s]) || '';
+    var sn = snapToWords(text, r.a, r.z);
+    if (sn[1] <= sn[0]) return;
+    applyBand({ b:r.b, s:r.s, a:sn[0], z:sn[1] }, color);
+  });
+  sortHighlights(); saveAll();
+  if (window.getSelection) window.getSelection().removeAllRanges();
+  hideSelbar(); renderArticle(); paintPanel();
+}
+function selectionHasHighlight(){
+  var ranges = captureRanges();
+  for (var i = 0; i < ranges.length; i++) {
+    var r = ranges[i];
+    for (var j = 0; j < state.highlights.length; j++) {
+      var h = state.highlights[j];
+      if (h.b === r.b && h.s === r.s && h.z > r.a && h.a < r.z) return true;
+    }
+  }
+  return false;
+}
+function renderArticle(){
+  var h = '<p class="kicker">' + esc(ARTICLE.kicker) + '</p><h1>' + esc(ARTICLE.title) + '</h1>';
+  ARTICLE.blocks.forEach(function(b, bi){
+    var inner;
+    if (b.t === 'pg') {
+      var verso = b.n && (Number(b.n) % 2 === 0);
+      inner = '<div class="pgbrk' + (b.h ? (verso ? ' verso' : '') : ' first') + '">' +
+              '<span class="rh">' + esc(b.h || '') + '</span>' +
+              '<span class="folio">' + esc(b.n || '') + '</span></div>';
+    }
+    else if (b.t === 'sec') {
+      inner = '<div class="secno">' + esc(b.x) + '</div>';
+    }
+    else if (b.t === 't') {
+      var hd = b.head || ['A','B'];
+      inner = '<table class="ab"><thead><tr><th>' + esc(hd[0]) + '</th><th>' + esc(hd[1]) +
+        '</th></tr></thead><tbody>' + b.rows.map(function(r, ri){
+          return '<tr><td>' + sentSpan(bi, ri*2, r[0]) + '</td><td>' + sentSpan(bi, ri*2+1, r[1]) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    } else {
+      var ins = DISP[bi].map(function(s, si){ return sentSpan(bi, si, s); }).join(' ');
+      if (b.t === 'p')      inner = '<p class="para">' + ins + '</p>';
+      else if (b.t === 'q') inner = '<blockquote class="quote">' + ins + '</blockquote>';
+      else if (b.t === 'epi') inner = '<div class="epi">' + ins +
+        (b.c ? '<span class="cite">' + esc(b.c) + '</span>' : '') + '</div>';
+      else if (b.t === 'fn') inner = '<div class="fnote"><span class="mk">' +
+        esc(b.m || '*') + '</span><span class="bd">' + ins + '</span></div>';
+      else                  inner = '<div class="note" data-label="' + esc(UI.noteLabel) + '">' + ins + '</div>';
+    }
+    h += '<div class="blk" data-b="' + bi + '">' + inner + '</div>';
+  });
+  appEl.innerHTML = h;
+  paintHighlight();
+}
+function paintHighlight(){
+  var prev = appEl.querySelectorAll('.s.reading');
+  for (var i = 0; i < prev.length; i++) prev[i].classList.remove('reading');
+  if (state.mode !== 'article' || state.unit < 0 || state.unit >= UNITS.length) return;
+  var u = UNITS[state.unit];
+  for (var si = u.s0; si <= u.s1; si++) {
+    var el = appEl.querySelector('.s[data-b="' + u.b + '"][data-s="' + si + '"]');
+    if (el) el.classList.add('reading');
+  }
+}
+var ICON_PLAY  = '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>';
+var ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+
+function paintPlayer(){
+  playEl.innerHTML = state.playing ? ICON_PAUSE : ICON_PLAY;
+  playEl.title = state.playing ? UI.pause : UI.play;
+  metaEl.classList.toggle('err', state.status === 'error');
+  var pos = state.unit >= 0 ? (state.unit + 1) + ' / ' + UNITS.length : '— / ' + UNITS.length;
+  var where = state.mode === 'sel' ? UI.selection : pos;
+  if (state.status === 'loading')      metaEl.innerHTML = '<span class="spin"></span>' + esc(UI.synthesizing) + ' · <b>' + esc(where) + '</b>';
+  else if (state.status === 'error')   metaEl.textContent = state.message;
+  else if (state.status === 'playing') metaEl.innerHTML = esc(UI.narrating) + ' · <b>' + esc(where) + '</b>';
+  else if (state.status === 'paused')  metaEl.innerHTML = esc(UI.paused) + ' · <b>' + esc(where) + '</b>';
+  else                                 metaEl.innerHTML = VOICE + ' — ' + esc(UI.ready) + ' · <b>' + esc(pos) + '</b>';
+}
+function paintPanel(){
+  panelEl.classList.toggle('open', state.panelOpen);
+  if (!state.panelOpen) return;
+  var h = '<button class="padd" data-action="bm-add">' + esc(UI.addBookmark) + '</button>';
+  if (!STORAGE_OK) h += '<div class="pwarn">' + esc(UI.storageWarn) + '</div>';
+
+  h += '<div class="phead">' + esc(UI.hdgBookmarks) + '</div>';
+  h += state.bookmarks.length
+    ? state.bookmarks.map(function(bi){
+        return '<div class="prow" data-action="bm-go" data-i="' + bi + '">' +
+               '<span class="n">' + (bi + 1) + '</span>' +
+               '<span class="t">' + esc(blockText(bi).slice(0, 110)) + '…</span>' +
+               '<span class="x" data-action="bm-del" data-i="' + bi + '">×</span></div>';
+      }).join('')
+    : '<div class="pempty">' + esc(UI.noBookmarks) + '</div>';
+
+  h += '<div class="phead">' + esc(UI.hdgHighlights) + '</div>';
+  h += state.highlights.length
+    ? state.highlights.map(function(x, i){
+        var t = ((DISP[x.b] && DISP[x.b][x.s]) || '').slice(x.a, x.z);
+        return '<div class="prow" data-action="hl-go" data-i="' + i + '">' +
+               '<span class="sw ' + x.c + '"></span>' +
+               '<span class="t">' + esc(t.slice(0, 110)) + '</span>' +
+               '<span class="x" data-action="hl-del" data-i="' + i + '">×</span></div>';
+      }).join('')
+    : '<div class="pempty">' + esc(UI.noHighlights) + '</div>';
+
+  h += '<button class="pbak" data-action="bak">' + esc(UI.backup) + '</button>' +
+       '<div id="bak" class="' + (state.bakOpen ? 'open' : '') + '">' +
+       '<div class="pwarn" style="background:transparent;color:var(--ink-faint);padding:8px 2px;">' +
+       esc(UI.backupHint) + '</div>' +
+       '<textarea id="bakBox" spellcheck="false">' + esc(exportText()) + '</textarea>' +
+       '<div class="brow"><button data-action="bak-copy">' + esc(UI.copy) + '</button>' +
+       '<button data-action="bak-restore">' + esc(UI.restore) + '</button></div></div>';
+
+  panelEl.innerHTML = h;
+}
+
+/* ---------------- API ---------------- */
+function callApi(model, payload){
+  var url = API_ROOT + model + ':generateContent?key=' + API_KEY, tries = 0;
+  function attempt(){
+    tries++;
+    return fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
+      .catch(function(e){
+        throw new Error('Network blocked (' + (e && e.message ? e.message : 'fetch failed') +
+          '). Run this inside Gemini Canvas, or set API_KEY at the top of the script.');
+      })
+      .then(function(res){
+        if ((res.status === 429 || res.status >= 500) && tries < 4) {
+          return new Promise(function(r){ setTimeout(r, Math.pow(2, tries) * 400); }).then(attempt);
+        }
+        if (!res.ok) return res.text().then(function(t){
+          throw new Error('API ' + res.status + (t ? ' · ' + t.slice(0, 110) : ''));
+        });
+        return res.json();
+      });
+  }
+  return attempt();
+}
+
+/* Walk a role's candidate list until one model answers. Only a "this model is
+   gone" style refusal advances the list — a genuine payload error still throws,
+   so a real bug is never hidden behind a retry. */
+var MODEL_OK = {};
+var DEAD_RE = /API 404|no longer available|not found|is not supported|NOT_FOUND/i;
+function callModel(role, candidates, payload){
+  var list = MODEL_OK[role] ? [MODEL_OK[role]] : candidates.slice();
+  var i = 0;
+  function tryNext(){
+    var model = list[i];
+    return callApi(model, payload).then(function(json){
+      MODEL_OK[role] = model;
+      return json;
+    }).catch(function(err){
+      if (i < list.length - 1 && DEAD_RE.test(String(err && err.message))) { i++; return tryNext(); }
+      throw err;
+    });
+  }
+  return tryNext();
+}
+
+/* Collins COBUILD-style lookup.
+   Two layers, always: ① the general dictionary entry, ② what it means right here.
+   The cache key carries the context, because the same word in a different
+   paragraph must not reuse the earlier contextual reading. */
+function explain(target, context){
+  var key = target.toLowerCase().trim() + '‖' + context.slice(0, 120);
+  if (explainCache.has(key)) return explainCache.get(key);
+
+  var prompt =
+    'You are a lexicographer writing in the style of the Collins COBUILD English Dictionary,\n' +
+    'helping an intermediate learner read a demanding text.\n\n' +
+    'HOUSE STYLE — follow all of it:\n' +
+    '• Definitions are FULL SENTENCES that show the word in its own grammar, never bare synonyms.\n' +
+    '    verb   → "If you abandon a place or person, you leave them permanently."\n' +
+    '    noun   → "A vine is a plant that grows up or over things."\n' +
+    '    adj    → "If something is fragile, it is easily broken or damaged."\n' +
+    '• Keep the wording within the ordinary defining vocabulary — plain, common words only (CEFR A2-B1).\n' +
+    '• Write in English only. No other language anywhere in the output.\n\n' +
+    'SELECTED TEXT:\n"""' + target.slice(0, 1200) + '"""\n\n' +
+    (context ? 'THE PASSAGE IT APPEARS IN:\n"""' + context.slice(0, 1400) + '"""\n\n'
+             : 'No surrounding passage was given.\n\n') +
+    'Return these fields:\n' +
+    'type       — word | phrase | clause | sentence.\n' +
+    'headword   — For a word or short phrase, the dictionary base form (grows→grow, keepers→keeper).\n' +
+    '             Leave empty for a clause or sentence.\n' +
+    'inflection — How the selected form relates to the headword ("3rd person singular", "plural",\n' +
+    '             "past participle"). Empty if the selection is already the base form, or not a word.\n' +
+    'frequency  — Collins-style band, 5 = among the most common English words, 1 = rare,\n' +
+    '             0 = not applicable (clause or sentence). Integer.\n' +
+    'grammar    — Collins pattern tag for how it is used HERE: "[VERB noun]", "[usually PASSIVE]",\n' +
+    '             "[ADJ noun]", "[V n prep]". Empty if not applicable.\n' +
+    'register   — Tone or usage label only if one genuinely applies: formal, informal, literary,\n' +
+    '             technical, old-fashioned, disapproval, emphasis. Otherwise empty.\n' +
+    'general    — For a word or phrase: the full-sentence COBUILD definition of the sense used here.\n' +
+    '             For a clause or sentence: a plain-English paraphrase of the whole thing.\n' +
+    '             Max 35 words.\n' +
+    'example    — One natural sentence of your own showing typical everyday usage, in the style of a\n' +
+    '             corpus citation. It must NOT be copied from the passage above. Empty for a sentence.\n' +
+    'contextual — What it actually means in THIS passage: the specific sense, what it refers back to,\n' +
+    '             and the writer\'s point in using it. Max 35 words.';
+
+  var p = callModel('text', TEXT_MODELS, {
+    contents:[{ parts:[{ text: prompt }] }],
+    generationConfig:{
+      temperature:0.2,
+      responseMimeType:'application/json',
+      responseSchema:{
+        type:'OBJECT',
+        properties:{
+          type:{type:'STRING'}, headword:{type:'STRING'}, inflection:{type:'STRING'},
+          frequency:{type:'INTEGER'}, grammar:{type:'STRING'}, register:{type:'STRING'},
+          general:{type:'STRING'}, example:{type:'STRING'}, contextual:{type:'STRING'}
+        },
+        required:['type','headword','inflection','frequency','grammar','register','general','example','contextual']
+      }
+    }
+  }).then(function(json){
+    var raw = '';
+    try { raw = json.candidates[0].content.parts[0].text; } catch (e) { raw = ''; }
+    if (!raw) throw new Error('Empty response');
+    var d = JSON.parse(raw);
+    var f = parseInt(d.frequency, 10);
+    return {
+      type:       d.type       || '',
+      headword:   d.headword   || '',
+      inflection: d.inflection || '',
+      frequency:  (isNaN(f) || f < 0) ? 0 : Math.min(f, 5),
+      grammar:    d.grammar    || '',
+      register:   d.register   || '',
+      general:    d.general    || '',
+      example:    d.example    || '',
+      contextual: d.contextual || ''
+    };
+  }).catch(function(err){ explainCache.delete(key); throw err; });
+
+  explainCache.set(key, p);
+  return p;
+}
+
+function b64ToBytes(b64){
+  var bin = atob(b64), n = bin.length, out = new Uint8Array(n);
+  for (var i = 0; i < n; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function pcmToWav(pcm, rate){
+  var len = pcm.length, buf = new ArrayBuffer(44 + len), v = new DataView(buf);
+  function s(o, str){ for (var i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); }
+  s(0,'RIFF');  v.setUint32(4, 36 + len, true);  s(8,'WAVE');
+  s(12,'fmt '); v.setUint32(16, 16, true);       v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);                      v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);               v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);                     s(36,'data');
+  v.setUint32(40, len, true);
+  new Uint8Array(buf, 44).set(pcm);
+  return new Blob([buf], { type:'audio/wav' });
+}
+function fetchAudio(text){
+  var key = state.ttsModel + '|' + text;
+  if (audioCache.has(key)) return audioCache.get(key);
+  var p = callModel('tts-' + state.ttsModel, TTS_MODELS[state.ttsModel], {
+    contents:[{ parts:[{ text: TTS_STYLE + text }] }],
+    generationConfig:{
+      responseModalities:['AUDIO'],
+      speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName: VOICE } } }
+    }
+  }).then(function(json){
+    var part;
+    try { part = json.candidates[0].content.parts[0].inlineData; } catch (e) { part = null; }
+    if (!part || !part.data) throw new Error('No audio returned');
+    var rm = /rate=(\d+)/.exec(part.mimeType || '');
+    return URL.createObjectURL(pcmToWav(b64ToBytes(part.data), rm ? parseInt(rm[1], 10) : 24000));
+  }).catch(function(err){ audioCache.delete(key); throw err; });
+  audioCache.set(key, p);
+  return p;
+}
+
+/* ---------------- playback ---------------- */
+function scrollToUnit(u){
+  var el = appEl.querySelector('.s[data-b="' + u.b + '"][data-s="' + u.s0 + '"]');
+  if (!el) return;
+  var r = el.getBoundingClientRect();
+  if (r.top < 130 || r.bottom > window.innerHeight - 40) {
+    window.scrollTo({ top: window.scrollY + r.top - 180, behavior:'smooth' });
+  }
+}
+function fail(err){
+  state.status = 'error'; state.playing = false;
+  state.message = String(err && err.message ? err.message : err).slice(0, 90);
+  paintPlayer();
+}
+function playUnit(i){
+  if (i < 0) i = 0;
+  if (i >= UNITS.length) { audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer(); return; }
+  state.mode = 'article'; state.unit = i; state.status = 'loading'; state.playing = true;
+  paintPlayer(); paintHighlight();
+  fetchAudio(UNITS[i].text).then(function(url){
+    if (state.unit !== i || state.mode !== 'article' || !state.playing) return;
+    audioEl.src = url;
+    return audioEl.play().then(function(){
+      state.status = 'playing'; paintPlayer(); scrollToUnit(UNITS[i]);
+      if (i + 1 < UNITS.length) fetchAudio(UNITS[i + 1].text).catch(function(){});
+    });
+  }).catch(fail);
+}
+function speak(text){
+  text = cleanTts(text).slice(0, SEL_MAX);
+  if (!text) return;
+  audioEl.pause();
+  state.mode = 'sel'; state.playing = true; state.status = 'loading';
+  paintPlayer(); paintHighlight();
+  fetchAudio(text).then(function(url){
+    if (state.mode !== 'sel' || !state.playing) return;
+    audioEl.src = url;
+    return audioEl.play().then(function(){ state.status = 'playing'; paintPlayer(); });
+  }).catch(fail);
+}
+function togglePlay(){
+  if (state.playing) { audioEl.pause(); state.playing = false; state.status = 'paused'; paintPlayer(); return; }
+  if (audioEl.src && audioEl.currentTime > 0 && !audioEl.ended) {
+    state.playing = true;
+    audioEl.play().then(function(){ state.status = 'playing'; paintPlayer(); })
+                  .catch(function(){ state.playing = false; state.status = 'ready'; paintPlayer(); });
+    return;
+  }
+  playUnit(state.unit < 0 ? 0 : state.unit);
+}
+audioEl.addEventListener('ended', function(){
+  if (!state.playing) return;
+  if (state.mode === 'sel') { state.playing = false; state.mode = 'article'; state.status = 'ready'; paintPlayer(); paintHighlight(); }
+  else playUnit(state.unit + 1);
+});
+
+/* ---------------- popovers ---------------- */
+function place(el, rect){
+  el.style.left = '0px'; el.style.top = '0px';
+  var w = el.offsetWidth, h = el.offsetHeight;
+  var left = Math.min(Math.max(8, rect.left + rect.width / 2 - w / 2), window.innerWidth - w - 8);
+  var top  = rect.top - h - 12;
+  if (top < 112) top = rect.bottom + 12;
+  if (top + h > window.innerHeight - 8) top = Math.max(112, window.innerHeight - h - 8);
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+}
+function hideSelbar(){ selbar.classList.remove('open'); }
+function hideTip(){
+  tipEl.classList.remove('open'); state.tip = null;
+  if (activeWord) { activeWord.classList.remove('on'); activeWord = null; }
+}
+function findBlockOf(term){
+  var t = term.toLowerCase();
+  for (var i = 0; i < ARTICLE.blocks.length; i++) {
+    if (blockText(i).toLowerCase().indexOf(t) > -1) return i;
+  }
+  return -1;
+}
+function actsHtml(hasFind){
+  return '<div class="acts"><button data-action="tip-play">' + esc(UI.listen) + '</button>' +
+    (hasFind ? '<button data-action="tip-find">' + esc(UI.findInText) + '</button>' : '') + '</div>';
+}
+function freqHtml(n){
+  if (!n) return '';
+  var out = '<span class="freq" title="' + esc(UI.freqLabel) + '">';
+  for (var i = 1; i <= 5; i++) out += '<i' + (i <= n ? ' class="on"' : '') + '></i>';
+  return out + '</span>';
+}
+
+/* headword → inflection → tags → ① dictionary meaning (+ usage example)
+   → ② meaning in this passage → actions */
+function entryHtml(head, d, hasFind){
+  var isLong = d.type === 'clause' || d.type === 'sentence';
+  var title  = (!isLong && d.headword) ? d.headword : head;
+
+  var tags = '';
+  if (d.type)     tags += '<span class="chip">' + esc(d.type) + '</span>';
+  if (d.grammar)  tags += '<span class="chip gram">' + esc(d.grammar) + '</span>';
+  if (d.register) tags += '<span class="chip reg">' + esc(d.register) + '</span>';
+  tags += freqHtml(d.frequency);
+
+  var h = '<div class="hw">' + esc(title) + '</div>';
+  if (!isLong && d.headword && d.headword.toLowerCase() !== head.toLowerCase()) {
+    h += '<div class="infl">' + esc(head) + (d.inflection ? ' · ' + esc(d.inflection) : '') + '</div>';
+  } else if (d.inflection) {
+    h += '<div class="infl">' + esc(d.inflection) + '</div>';
+  }
+  if (tags) h += '<div class="tags">' + tags + '</div>';
+
+  if (d.general) {
+    h += '<div class="sec first"><div class="lbl">' +
+         esc(isLong ? UI.dictParaphrase : UI.dictGeneral) + '</div>' +
+         '<div class="en">' + esc(d.general) + '</div>' +
+         (d.example ? '<div class="ex">' + esc(d.example) + '</div>' : '') + '</div>';
+  }
+  if (d.contextual) {
+    h += '<div class="sec' + (d.general ? '' : ' first') + '"><div class="lbl">' +
+         esc(UI.dictContextual) + '</div><div class="why">' + esc(d.contextual) + '</div></div>';
+  }
+  return h + actsHtml(hasFind);
+}
+
+function showTip(target, context, rect, anchorEl){
+  if (activeWord && activeWord !== anchorEl) activeWord.classList.remove('on');
+  activeWord = anchorEl || null;
+  if (activeWord) activeWord.classList.add('on');
+
+  var hit = findBlockOf(target);
+  state.tip = { text:target, block:hit, rect:rect };
+  anchorY = window.scrollY;
+
+  var head = target.length > 90 ? target.slice(0, 90) + '…' : target;
+  tipEl.classList.add('open');
+  tipEl.innerHTML = '<div class="hw">' + esc(head) + '</div><div class="load">' + esc(UI.explaining) + '</div>';
+  place(tipEl, rect);
+
+  /* Prefer the block the reader actually touched. `hit` is only the FIRST
+     occurrence in the text, so it is a fallback for search-box lookups. */
+  var ctx = context || (hit > -1 ? blockText(hit) : '');
+
+  explain(target, ctx).then(function(d){
+    if (!tipEl.classList.contains('open') || !state.tip || state.tip.text !== target) return;
+    tipEl.innerHTML = entryHtml(head, d, hit > -1);
+    place(tipEl, rect);
+  }).catch(function(err){
+    if (!tipEl.classList.contains('open') || !state.tip || state.tip.text !== target) return;
+    tipEl.innerHTML = '<div class="hw">' + esc(head) + '</div><div class="err">' +
+      esc(String(err.message || err).slice(0, 140)) + '</div>' + actsHtml(hit > -1);
+    place(tipEl, rect);
+  });
+}
+function flashFind(bi, term){
+  var t = term.toLowerCase(), target = null;
+  var spans = appEl.querySelectorAll('.s[data-b="' + bi + '"]');
+  for (var i = 0; i < spans.length; i++) {
+    if (spans[i].textContent.toLowerCase().indexOf(t) > -1) { target = spans[i]; break; }
+  }
+  if (!target) target = spans[0];
+  if (!target) return;
+  window.scrollTo({ top: window.scrollY + target.getBoundingClientRect().top - 170, behavior:'smooth' });
+  clearTimeout(foundTimer);
+  var old = appEl.querySelectorAll('.s.found');
+  for (var j = 0; j < old.length; j++) old[j].classList.remove('found');
+  target.classList.add('found');
+  foundTimer = setTimeout(function(){ target.classList.remove('found'); }, 2200);
+}
+function evalSelection(){
+  var sel = window.getSelection ? window.getSelection() : null;
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) { hideSelbar(); return; }
+  var text = sel.toString().replace(/\s+/g, ' ').trim();
+  if (!text) { hideSelbar(); return; }
+  var node = sel.anchorNode, el = node ? (node.nodeType === 1 ? node : node.parentElement) : null;
+  if (!el || !appEl.contains(el)) { hideSelbar(); return; }
+  var blk = el.closest ? el.closest('.blk') : null;
+  state.sel = { text:text, ctx: blk ? blockText(Number(blk.getAttribute('data-b'))) : '' };
+  hideTip();
+  anchorY = window.scrollY;
+  document.getElementById('selErase').style.display = selectionHasHighlight() ? '' : 'none';
+  selbar.classList.add('open');
+  place(selbar, sel.getRangeAt(0).getBoundingClientRect());
+}
+
+/* ---------------- bookmarks ---------------- */
+function topVisibleBlock(){
+  var els = appEl.querySelectorAll('.blk');
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].getBoundingClientRect().bottom > 140) return Number(els[i].getAttribute('data-b'));
+  }
+  return 0;
+}
+function addBookmark(){
+  var bi = (state.mode === 'article' && state.playing && state.unit >= 0) ? UNITS[state.unit].b : topVisibleBlock();
+  if (state.bookmarks.indexOf(bi) === -1) {
+    state.bookmarks.push(bi);
+    state.bookmarks.sort(function(a, b){ return a - b; });
+    saveAll();
+  }
+  paintPanel();
+}
+function jumpToBlock(bi){
+  var el = appEl.querySelector('.blk[data-b="' + bi + '"]');
+  if (el) window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - 140, behavior:'smooth' });
+}
+
+/* ---------------- events (delegated once) ---------------- */
+selbar.addEventListener('mousedown', function(ev){ ev.preventDefault(); }, false);
+tipEl.addEventListener('mousedown', function(ev){ ev.preventDefault(); }, false);
+
+document.getElementById('searchForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var term = (qEl.value || '').replace(/\s+/g, ' ').trim();
+  if (!term) return;
+  hideSelbar(); qEl.blur();
+  showTip(term, '', qEl.getBoundingClientRect(), null);
+}, false);
+
+document.addEventListener('click', function(ev){
+  var t = ev.target, act = t.closest ? t.closest('[data-action]') : null;
+
+  if (!act) {
+    var w = t.closest ? t.closest('.w') : null;
+    if (w && state.dict && appEl.contains(w)) {
+      var blk = w.closest('.blk');
+      showTip(w.getAttribute('data-w'), blk ? blockText(Number(blk.getAttribute('data-b'))) : '',
+              w.getBoundingClientRect(), w);
+      return;
+    }
+    if (!tipEl.contains(t)) hideTip();
+    if (!panelEl.contains(t)) { state.panelOpen = false; paintPanel(); }
+    return;
+  }
+
+  var a = act.getAttribute('data-action');
+  if (a === 'dict') {
+    state.dict = !state.dict;
+    dictEl.setAttribute('aria-pressed', state.dict ? 'true' : 'false');
+    document.body.classList.toggle('dict', state.dict);
+    hideTip(); renderArticle();
+  }
+  else if (a === 'panel')  { state.panelOpen = !state.panelOpen; paintPanel(); }
+  else if (a === 'bm-add') { addBookmark(); }
+  else if (a === 'bm-del') {
+    ev.stopPropagation();
+    var di = Number(act.getAttribute('data-i'));
+    state.bookmarks = state.bookmarks.filter(function(x){ return x !== di; });
+    saveAll(); paintPanel();
+  }
+  else if (a === 'bm-go') {
+    jumpToBlock(Number(act.getAttribute('data-i')));
+    state.panelOpen = false; paintPanel();
+  }
+  else if (a === 'hl')       { highlightSelection(act.getAttribute('data-c')); }
+  else if (a === 'hl-erase') { highlightSelection(null); }
+  else if (a === 'hl-del') {
+    ev.stopPropagation();
+    state.highlights.splice(Number(act.getAttribute('data-i')), 1);
+    saveAll(); renderArticle(); paintPanel();
+  }
+  else if (a === 'hl-go') {
+    var hx = state.highlights[Number(act.getAttribute('data-i'))];
+    if (hx) { state.panelOpen = false; paintPanel(); jumpToBlock(hx.b); }
+  }
+  else if (a === 'bak')      { state.bakOpen = !state.bakOpen; paintPanel(); }
+  else if (a === 'bak-copy') {
+    var box = document.getElementById('bakBox');
+    box.value = exportText(); box.select(); box.setSelectionRange(0, box.value.length);
+    var done = function(){ act.textContent = UI.copied; setTimeout(function(){ act.textContent = UI.copy; }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(box.value).then(done, function(){ try { document.execCommand('copy'); done(); } catch (e) {} });
+    } else { try { document.execCommand('copy'); done(); } catch (e) {} }
+  }
+  else if (a === 'bak-restore') {
+    var ok = importText(document.getElementById('bakBox').value);
+    act.textContent = ok ? UI.restored : UI.badBackup;
+    if (ok) { renderArticle(); state.bakOpen = true; setTimeout(paintPanel, 900); }
+    else setTimeout(function(){ act.textContent = UI.restore; }, 2000);
+  }
+  else if (a === 'play') togglePlay();
+  else if (a === 'prev') playUnit(state.unit <= 0 ? 0 : state.unit - 1);
+  else if (a === 'next') playUnit(state.unit + 1);
+  else if (a === 'sel-explain') {
+    if (!state.sel) return;
+    var r = selbar.getBoundingClientRect(); hideSelbar();
+    showTip(state.sel.text, state.sel.ctx, r, null);
+  }
+  else if (a === 'sel-play')  { hideSelbar(); if (state.sel) speak(state.sel.text); }
+  else if (a === 'tip-play')  { if (state.tip) speak(state.tip.text); }
+  else if (a === 'tip-find')  {
+    if (state.tip && state.tip.block > -1) { var tt = state.tip; hideTip(); flashFind(tt.block, tt.text); }
+  }
+}, false);
+
+document.addEventListener('change', function(ev){
+  var act = ev.target.closest ? ev.target.closest('[data-action]') : null;
+  if (!act) return;
+  var a = act.getAttribute('data-action');
+  if (a === 'model') {
+    state.ttsModel = act.value;
+    audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer();
+  } else if (a === 'gran') {
+    var at = (state.unit >= 0 && UNITS[state.unit]) ? UNITS[state.unit].b : -1;
+    state.gran = act.value;
+    audioEl.pause(); state.playing = false; state.status = 'ready';
+    buildUnits(); state.unit = -1;
+    if (at >= 0) for (var i = 0; i < UNITS.length; i++) if (UNITS[i].b === at) { state.unit = i; break; }
+    paintPlayer(); paintHighlight();
+  }
+}, false);
+
+appEl.addEventListener('mouseover', function(ev){
+  if (!state.dict || !CAN_HOVER) return;
+  var el = ev.target.closest ? ev.target.closest('.w') : null;
+  if (!el) return;
+  clearTimeout(hoverTimer);
+  hoverTimer = setTimeout(function(){
+    var s = window.getSelection ? window.getSelection() : null;
+    if (s && !s.isCollapsed) return;
+    var blk = el.closest('.blk');
+    showTip(el.getAttribute('data-w'), blk ? blockText(Number(blk.getAttribute('data-b'))) : '',
+            el.getBoundingClientRect(), el);
+  }, 340);
+}, false);
+appEl.addEventListener('mouseout', function(){ clearTimeout(hoverTimer); }, false);
+
+document.addEventListener('selectionchange', function(){
+  clearTimeout(selTimer);
+  selTimer = setTimeout(evalSelection, 280);
+}, false);
+
+document.addEventListener('keydown', function(ev){
+  if (ev.target && ev.target.id === 'q') {
+    if (ev.key === 'Escape') { ev.target.value = ''; ev.target.blur(); hideTip(); }
+    return;
+  }
+  if (ev.key === 'Escape') { hideTip(); hideSelbar(); state.panelOpen = false; paintPanel(); }
+}, false);
+
+/* Popovers survive the small scroll a touch drag causes. */
+window.addEventListener('scroll', function(){
+  if (Math.abs(window.scrollY - anchorY) < SCROLL_TOL) return;
+  if (tipEl.classList.contains('open')) hideTip();
+  if (selbar.classList.contains('open')) hideSelbar();
+}, { passive:true });
+
+window.addEventListener('resize', function(){ hideTip(); hideSelbar(); }, { passive:true });
+
+/* ---------------- boot ---------------- */
+function applyStrings(){
+  document.title = ARTICLE.title;
+  document.getElementById('brand').textContent = ARTICLE.kicker + ' · ' + ARTICLE.title;
+  qEl.placeholder = UI.searchPlaceholder;
+  document.getElementById('qBtn').setAttribute('aria-label', UI.searchLabel);
+  dictEl.textContent = UI.dictionary;
+  dictEl.title = UI.dictionaryHint;
+  document.getElementById('bmBtn').setAttribute('aria-label', UI.bookmarks);
+  document.getElementById('bmBtn').title = UI.bookmarks;
+  document.querySelector('[data-action="prev"]').title = UI.prev;
+  document.querySelector('[data-action="next"]').title = UI.next;
+  document.getElementById('selExplain').textContent = UI.explain;
+  document.getElementById('selPlay').textContent = UI.listen;
+  document.getElementById('selErase').title = UI.eraseHighlight;
+  var dots = selbar.querySelectorAll('[data-action="hl"]');
+  for (var i = 0; i < dots.length; i++) dots[i].title = UI.highlight;
+  document.getElementById('voicetag').textContent = VOICE;
+  document.getElementById('ns').textContent = UI.noscript;
+  document.getElementById('granSel').innerHTML =
+    '<option value="sent">' + esc(UI.unitSentence) + '</option><option value="para">' + esc(UI.unitParagraph) + '</option>';
+  document.getElementById('modelSel').innerHTML =
+    '<option value="flash">' + esc(UI.modelFlash) + '</option><option value="pro">' + esc(UI.modelPro) + '</option>';
+}
+
+applyStrings();
+buildSents();          /* DISP must exist before saved marks are validated */
+buildUnits();
+STORAGE_OK = probeStorage();
+loadAll();
+sortHighlights();
+renderArticle();
+paintPlayer();
+paintPanel();
+
+})();
+</script>
+</body>
+</html>

@@ -93,8 +93,8 @@
   select.sel{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);background:transparent;
     border:1px solid var(--line);border-radius:999px;height:var(--tap);padding:0 8px;cursor:pointer;flex:0 0 auto;
     -webkit-appearance:none;appearance:none;text-align:center;}
-  .voicetag{font-family:var(--sans);font-size:11px;letter-spacing:.06em;color:var(--accent);
-    background:var(--accent-soft);border-radius:999px;padding:6px 10px;white-space:nowrap;flex:0 0 auto;}
+  select.sel.voice{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-soft);
+    letter-spacing:.02em;padding:0 10px;width:132px;}
   .spin{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;
     border:1.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}
   @keyframes sp{to{transform:rotate(360deg);}}
@@ -282,7 +282,7 @@
     .search{flex:1 1 auto;}
     .search input{width:100%;}
     .search input:focus{width:100%;}
-    .voicetag{display:none;}
+    select.sel.voice{width:72px;padding:0 6px;}
   }
 
   /* ---------- API key ---------- */
@@ -332,7 +332,7 @@
     <span class="pmeta" id="pmeta"></span>
     <select class="sel" data-action="gran" id="granSel"></select>
     <select class="sel" data-action="model" id="modelSel"></select>
-    <span class="voicetag" id="voicetag"></span>
+    <select class="sel voice" data-action="voice" id="voiceSel"></select>
   </div>
 </header>
 
@@ -503,6 +503,7 @@ var UI = {
   badBackup         : 'That backup could not be read.',
   storageWarn       : 'This page cannot save to the browser here, so your marks will be lost when you close it. Use Backup & restore below to keep them.',
   noscript          : 'This reader needs JavaScript for the audio player and the dictionary.',
+  voiceLabel        : 'Voice',
   hdgKey            : 'Gemini API key',
   keySrcCode        : 'Using the key written in the code (API_KEY).',
   keySrcTab         : 'Using the key you entered. It is kept for this tab only.',
@@ -549,7 +550,21 @@ var TTS_MODELS  = {
   flash: ['gemini-3.8-flash-lite-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'],
   pro:   ['gemini-3.8-flash-tts', 'gemini-2.5-pro-preview-tts', 'gemini-3.1-flash-tts-preview']
 };
+/* VOICE is the default narrator. The menu lists VOICES; the one picked last
+   is remembered in this browser for every reader. Reorder or trim freely. */
 var VOICE      = 'Aoede';
+var VOICES     = [
+  ['Zephyr','Bright'],      ['Puck','Upbeat'],         ['Charon','Informative'],
+  ['Kore','Firm'],          ['Fenrir','Excitable'],    ['Leda','Youthful'],
+  ['Orus','Firm'],          ['Aoede','Breezy'],        ['Callirrhoe','Easy-going'],
+  ['Autonoe','Bright'],     ['Enceladus','Breathy'],   ['Iapetus','Clear'],
+  ['Umbriel','Easy-going'], ['Algieba','Smooth'],      ['Despina','Smooth'],
+  ['Erinome','Clear'],      ['Algenib','Gravelly'],    ['Rasalgethi','Informative'],
+  ['Laomedeia','Upbeat'],   ['Achernar','Soft'],       ['Alnilam','Firm'],
+  ['Schedar','Even'],       ['Gacrux','Mature'],       ['Pulcherrima','Forward'],
+  ['Achird','Friendly'],    ['Zubenelgenubi','Casual'],['Vindemiatrix','Gentle'],
+  ['Sadachbia','Lively'],   ['Sadaltager','Knowledgeable'], ['Sulafat','Warm']
+];
 /* Gemini 3.8+ TTS reads `text` verbatim, so delivery goes in speech_metadata.style
    (keep it short). Older *-preview models still take the direction as a text prefix. */
 var TTS_STYLE        = 'calm, unhurried audiobook narration';
@@ -562,7 +577,7 @@ var SCROLL_TOL = 30;     /* px of scroll tolerated before popovers close */
 
 var state = {
   dict:false, panelOpen:false, bakOpen:false, bookmarks:[], highlights:[],
-  gran:'sent', ttsModel:'flash',
+  gran:'sent', ttsModel:'flash', voice:VOICE,
   mode:'article', unit:-1, playing:false,
   status:'ready', message:'',
   sel:null, tip:null
@@ -742,6 +757,17 @@ function loadAll(){
 function saveAll(){
   try { window.localStorage.setItem(STORE, JSON.stringify({ b:state.bookmarks, h:state.highlights })); }
   catch (e) {}
+}
+/* The chosen voice is shared by every reader, so it has its own key. */
+var VOICE_STORE = 'reader:voice';
+function isVoice(v){ return VOICES.some(function(x){ return x[0] === v; }); }
+function loadVoice(){
+  var v = null;
+  try { v = window.localStorage.getItem(VOICE_STORE); } catch (e) {}
+  state.voice = (v && isVoice(v)) ? v : (isVoice(VOICE) ? VOICE : VOICES[0][0]);
+}
+function saveVoice(){
+  try { window.localStorage.setItem(VOICE_STORE, state.voice); } catch (e) {}
 }
 function exportText(){
   return JSON.stringify({ id:ARTICLE.id, b:state.bookmarks, h:state.highlights });
@@ -927,7 +953,7 @@ function paintPlayer(){
   else if (state.status === 'error')   metaEl.textContent = state.message;
   else if (state.status === 'playing') metaEl.innerHTML = esc(UI.narrating) + ' · <b>' + esc(where) + '</b>';
   else if (state.status === 'paused')  metaEl.innerHTML = esc(UI.paused) + ' · <b>' + esc(where) + '</b>';
-  else                                 metaEl.innerHTML = esc(VOICE) + ' — ' + esc(UI.ready) + ' · <b>' + esc(pos) + '</b>';
+  else                                 metaEl.innerHTML = esc(state.voice) + ' — ' + esc(UI.ready) + ' · <b>' + esc(pos) + '</b>';
 }
 function paintPanel(){
   panelEl.classList.toggle('open', state.panelOpen);
@@ -1200,7 +1226,7 @@ function pcmToWav(pcm, rate){
   return new Blob([buf], { type:'audio/wav' });
 }
 function fetchAudio(text){
-  var key = state.ttsModel + '|' + text;
+  var voice = state.voice, key = state.ttsModel + '|' + voice + '|' + text;
   if (audioCache.has(key)) return audioCache.get(key);
   var p = callModel('tts-' + state.ttsModel, TTS_MODELS[state.ttsModel], function(model){
     var legacy = /preview/.test(model);
@@ -1209,7 +1235,7 @@ function fetchAudio(text){
                                  : { text: text, speech_metadata:{ style: TTS_STYLE } } ] }],
       generationConfig:{
         responseModalities:['AUDIO'],
-        speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName: VOICE } } }
+        speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName: voice } } }
       }
     };
   }).then(function(json){
@@ -1533,7 +1559,11 @@ document.addEventListener('change', function(ev){
   var act = ev.target.closest ? ev.target.closest('[data-action]') : null;
   if (!act) return;
   var a = act.getAttribute('data-action');
-  if (a === 'model') {
+  if (a === 'voice') {
+    if (!isVoice(act.value)) return;
+    state.voice = act.value; saveVoice();
+    audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer();
+  } else if (a === 'model') {
     state.ttsModel = act.value;
     audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer();
   } else if (a === 'gran') {
@@ -1604,7 +1634,11 @@ function applyStrings(){
   document.getElementById('selErase').title = UI.eraseHighlight;
   var dots = selbar.querySelectorAll('[data-action="hl"]');
   for (var i = 0; i < dots.length; i++) dots[i].title = UI.highlight;
-  document.getElementById('voicetag').textContent = VOICE;
+  var vs = document.getElementById('voiceSel');
+  vs.title = UI.voiceLabel; vs.setAttribute('aria-label', UI.voiceLabel);
+  vs.innerHTML = VOICES.map(function(x){
+    return '<option value="' + esc(x[0]) + '">' + esc(x[0] + ' — ' + x[1]) + '</option>';
+  }).join('');
   document.getElementById('ns').textContent = UI.noscript;
   document.getElementById('keyTitle').textContent = UI.keyTitle;
   document.getElementById('keyHint').textContent = UI.keyHint;
@@ -1622,6 +1656,8 @@ buildSents();          /* DISP must exist before saved marks are validated */
 buildUnits();
 STORAGE_OK = probeStorage();
 loadAll();
+loadVoice();
+document.getElementById('voiceSel').value = state.voice;
 sortHighlights();
 renderArticle();
 paintPlayer();

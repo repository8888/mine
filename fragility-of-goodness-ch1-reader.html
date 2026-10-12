@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Luck and Ethics — Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#fbfaf8;
+    --ink:#1c1b19;
+    --ink-soft:#6b6862;
+    --ink-faint:#9c9891;
+    --line:#e5e2dc;
+    --accent:#8a6f4e;
+    --accent-soft:#f0e9df;
+    --panel:#ffffff;
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%;
+  }
+  ::selection{background:#e7dcc9;}
+
+  /* ---------- header ---------- */
+  #topbar{
+    position:sticky;top:0;z-index:40;
+    background:rgba(251,250,248,.93);
+    backdrop-filter:saturate(180%) blur(12px);
+    -webkit-backdrop-filter:saturate(180%) blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .bar{max-width:760px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;gap:10px;}
+  .brand{font-family:var(--sans);font-size:12px;letter-spacing:.04em;color:var(--ink-soft);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0;}
+  .grow{flex:1 1 auto;min-width:0;}
+  .search{flex:1 1 200px;min-width:110px;display:flex;}
+  .search input{
+    width:100%;font-family:var(--sans);font-size:12px;color:var(--ink);
+    background:#fff;border:1px solid var(--line);border-radius:999px;
+    padding:7px 13px;outline:none;-webkit-appearance:none;appearance:none;
+    transition:border-color .15s;
+  }
+  .search input::placeholder{color:var(--ink-faint);}
+  .search input:focus{border-color:var(--accent);}
+  .btn{
+    font-family:var(--sans);font-size:12px;line-height:1;color:var(--ink-soft);
+    background:transparent;border:1px solid var(--line);border-radius:999px;
+    padding:7px 12px;cursor:pointer;white-space:nowrap;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .btn:hover{border-color:var(--ink-faint);color:var(--ink);}
+  .btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent);}
+  .btn.icon{padding:7px 10px;}
+
+  /* ---------- player ---------- */
+  #player{max-width:760px;margin:0 auto;padding:0 24px;height:44px;display:flex;align-items:center;gap:7px;}
+  .pbtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+    border:none;background:transparent;color:var(--ink-soft);cursor:pointer;border-radius:50%;
+    transition:background .15s,color .15s;flex:0 0 auto;}
+  .pbtn:hover{background:var(--accent-soft);color:var(--accent);}
+  .pbtn svg{width:15px;height:15px;fill:currentColor;}
+  .pbtn.main svg{width:17px;height:17px;}
+  .pmeta{font-family:var(--sans);font-size:11px;letter-spacing:.03em;color:var(--ink-faint);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pmeta b{color:var(--ink-soft);font-weight:500;}
+  .pmeta.err{color:#a4443a;}
+  select.sel{font-family:var(--sans);font-size:11px;color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:999px;padding:5px 7px;cursor:pointer;flex:0 0 auto;}
+  .voicetag{font-family:var(--sans);font-size:11px;letter-spacing:.06em;color:var(--accent);
+    background:var(--accent-soft);border-radius:999px;padding:5px 9px;white-space:nowrap;flex:0 0 auto;}
+  .spin{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;
+    border:1.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  /* ---------- bookmark panel ---------- */
+  #panel{position:fixed;z-index:50;right:16px;top:100px;width:min(340px,calc(100vw - 32px));
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 12px 40px rgba(28,27,25,.10);padding:8px;display:none;max-height:60vh;overflow:auto;}
+  #panel.open{display:block;}
+  .prow{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;}
+  .prow:hover{background:var(--accent-soft);}
+  .prow .n{font-family:var(--sans);font-size:10px;color:var(--accent);padding-top:3px;min-width:26px;}
+  .prow .t{font-size:13.5px;line-height:1.45;color:var(--ink-soft);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .prow .x{margin-left:auto;font-family:var(--sans);font-size:14px;color:var(--ink-faint);padding:0 2px;line-height:1;}
+  .prow .x:hover{color:#a4443a;}
+  .pempty{font-family:var(--sans);font-size:12px;color:var(--ink-faint);padding:14px 10px;text-align:center;}
+  .padd{width:100%;font-family:var(--sans);font-size:12px;color:var(--accent);background:var(--accent-soft);
+    border:none;border-radius:7px;padding:9px;cursor:pointer;margin-bottom:6px;}
+
+  /* ---------- article ---------- */
+  #app{max-width:760px;margin:0 auto;padding:56px 24px 40vh;}
+  .title{font-size:15px;font-family:var(--sans);color:var(--ink-faint);letter-spacing:.06em;
+    text-transform:uppercase;margin:0 0 10px;}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,6vw,42px);
+    line-height:1.18;letter-spacing:-.01em;margin:0 0 48px;}
+  p.para{font-size:19px;line-height:1.78;margin:0 0 26px;letter-spacing:.002em;}
+  blockquote.quote{margin:0 0 26px;padding:2px 0 2px 22px;border-left:2px solid var(--line);
+    font-size:17.5px;line-height:1.72;color:var(--ink-soft);}
+  .note{font-size:15px;line-height:1.68;color:var(--ink-soft);margin:0 0 26px;
+    padding:16px 18px;background:#f5f3ef;border-radius:6px;}
+  .note::before{content:'note';display:block;font-family:var(--sans);font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px;}
+  table.ab{width:100%;border-collapse:collapse;margin:0 0 26px;font-size:16px;line-height:1.6;}
+  table.ab th{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:500;text-align:left;padding:0 14px 8px 0;border-bottom:1px solid var(--line);}
+  table.ab td{padding:12px 14px 12px 0;border-bottom:1px solid var(--line);vertical-align:top;width:50%;}
+  table.ab tr:last-child td{border-bottom:none;}
+
+  /* ---------- reading units ---------- */
+  .s{border-radius:3px;transition:background .3s;}
+  .s.reading{background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft);}
+  .w{cursor:default;}
+  body.dict .w{cursor:help;}
+  body.dict .w:hover,.w.on{background:#e7dcc9;border-radius:3px;box-shadow:0 0 0 2px #e7dcc9;}
+
+  /* ---------- selection action bar ---------- */
+  #selbar{position:fixed;z-index:65;display:none;gap:2px;padding:3px;
+    background:var(--ink);border-radius:9px;box-shadow:0 8px 26px rgba(28,27,25,.28);}
+  #selbar.open{display:flex;}
+  #selbar button{font-family:var(--sans);font-size:11.5px;letter-spacing:.02em;color:#f4f1ec;
+    background:transparent;border:none;border-radius:7px;padding:7px 11px;cursor:pointer;white-space:nowrap;}
+  #selbar button:hover{background:rgba(255,255,255,.14);}
+  #selbar .sep{width:1px;background:rgba(255,255,255,.16);margin:5px 1px;}
+
+  /* ---------- explain tooltip ---------- */
+  #tip{position:fixed;z-index:60;max-width:min(340px,calc(100vw - 24px));
+    background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    box-shadow:0 10px 34px rgba(28,27,25,.13);padding:12px 14px;display:none;font-family:var(--sans);}
+  #tip.open{display:block;}
+  #tip .hw{font-family:var(--serif);font-size:16px;line-height:1.4;margin-bottom:6px;}
+  #tip .chip{display:inline-block;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 8px;margin-bottom:8px;}
+  #tip .en{font-size:13.5px;line-height:1.55;color:var(--ink);margin-bottom:6px;}
+  #tip .why{font-size:12.5px;line-height:1.55;color:var(--ink-soft);}
+  #tip .load{font-size:12px;color:var(--ink-faint);}
+
+  noscript{display:block;max-width:760px;margin:60px auto;padding:0 24px;
+    font-size:16px;line-height:1.7;color:var(--ink-soft);}
+
+  @media (max-width:640px){
+    .bar{padding:0 18px;gap:8px;}
+    #player{padding:0 18px;gap:5px;}
+    #app{padding:40px 18px 40vh;}
+    p.para{font-size:17.5px;}
+    .btn{padding:6px 10px;font-size:11px;}
+    .voicetag{display:none;}
+    .brand{display:none;}
+    table.ab td,table.ab th{font-size:14.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="bar">
+    <div class="brand">The Fragility of Goodness &middot; Ch.1</div>
+    <div class="search"><input id="q" type="search" autocomplete="off" spellcheck="false"
+      placeholder="Look up a word, phrase, or sentence…" /></div>
+    <button class="btn" id="dictBtn" data-action="dict" aria-pressed="false" title="Hover or tap a word to explain it">Dictionary</button>
+    <button class="btn icon" data-action="panel" title="Bookmarks">&#9634;</button>
+  </div>
+  <div id="player">
+    <button class="pbtn" data-action="prev" title="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5l-9 7 9 7z"/></svg></button>
+    <button class="pbtn main" id="playBtn" data-action="play" title="Play"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+    <button class="pbtn" data-action="next" title="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <span class="pmeta grow" id="pmeta">Aoede narration — ready</span>
+    <select class="sel" data-action="gran" title="Playback unit">
+      <option value="sent">Sentence</option>
+      <option value="para">Paragraph</option>
+    </select>
+    <select class="sel" data-action="model" title="TTS model">
+      <option value="flash">Flash</option>
+      <option value="pro">Pro</option>
+    </select>
+    <span class="voicetag">Aoede</span>
+  </div>
+</header>
+
+<div id="panel"></div>
+<div id="selbar">
+  <button data-action="sel-explain">Explain</button>
+  <span class="sep"></span>
+  <button data-action="sel-play">&#9654;&nbsp; Listen</button>
+</div>
+<div id="tip"></div>
+
+<main id="app"></main>
+
+<noscript>
+  This reader needs JavaScript for the audio player and the context dictionary.
+  The chapter text is generated on the page, so please enable JavaScript to read it.
+</noscript>
+
+<script>
+'use strict';
+(function () {
+
+/* ============================================================
+   1. CONTENT  —  swap this object out to load a different text
+   ============================================================ */
+var ARTICLE = {
+  kicker: 'The Fragility of Goodness',
+  title: 'Chapter 1 — Luck and Ethics',
+  blocks: [
+
+{t:'p',x:`'But human excellence grows like a vine tree, fed by the green dew, raised up, among wise men and just, to the liquid sky.'¹ So Pindar displays a problem that lies at the heart of Greek thought about the good life for a human being. He is a poet who has dedicated his career to writing lyric odes in praise of human excellence. This career presupposes, on the part of both poet and audience, the belief that the excellence of a good person is something of that person's own, for whose possession and exercise that person can appropriately be held accountable.² He has just been praying to die as he had lived, as one 'who praised what deserves praise and sowed blame for wrong-doers'. His 'but', which might equally well be translated 'and', both continues and qualifies that prayer. The excellence of the good person, he writes, is like a young plant: something growing in the world, slender, fragile, in constant need of food from without. A vine tree must be of good stock if it is to grow well. And even if it has a good heritage, it needs fostering weather (gentle dew and rain, the absence of sudden frosts and harsh winds), as well as the care of concerned and intelligent keepers, for its continued health and full perfection. So, the poet suggests, do we. We need to be born with adequate capacities, to live in fostering natural and social circumstances, to stay clear of abrupt catastrophe, to develop confirming associations with other human beings. The poem's next lines are, 'We have all kinds of needs for those we love: most of all in hardships, but joy, too, strains to track down eyes that it can trust.'`},
+
+{t:'p',x:`Our openness to fortune and our sense of value, here again, both render us dependent on what is outside of us: our openness to fortune, because we encounter hardships and can come to need something that only another can provide; our sense of value, because even when we do not need the help of friends and loved ones, love and friendship still matter to us for their own sake. Even the poet's joy is incomplete without the tenuous luck of seeing it confirmed by eyes on whose understanding, good will, and truthfulness he can rely. His joy is like a hunter, straining on the track of an elusive quarry. Much of the poem has been about envy, the way lies can make the world rotten. The one trusted friend invoked by the poet is dead, beyond the reach even of his poetic words. And all these needs for all these things that we do not humanly control are pertinent, clearly, not only to feelings of contentment or happiness. What the external nourishes, and even helps to constitute, is excellence or human worth itself.`},
+
+{t:'p',x:`The vine-tree image, standing near the poem's end, between the wish to die a praiser of goodness and the invocation of the dead friend, confronts us with a deep dilemma in the poet's situation, which is also ours. It displays the thorough intermingling of what is ours and what belongs to the world, of ambition and vulnerability, of making and being made, that are present in this and in any human life. In so doing, it asks a question about the beliefs that sustain human ethical practices. How can Pindar be a praise poet, if human goodness is nourished, and even constituted, by external happenings? How can we be givers and receivers of praise, if our worth is just a plant in need of watering? The audience is invited to inspect its own self-conception. To what extent can we distinguish between what is up to the world and what is up to us, when assessing a human life? To what extent must we insist on finding these distinctions, if we are to go on praising as we praise? And how can we improve this situation, making progress by placing the most important things, things such as personal achievement, politics, and love, under our control?`},
+
+{t:'p',x:`The problem is made more complex by a further implication of the poetic image. It suggests that part of the peculiar beauty of human excellence just is its vulnerability. The tenderness of a plant is not the dazzling hardness of a gem. There seem to be two, and perhaps two incompatible, kinds of value here. Nor, perhaps, is the beauty of a true human love the same as that of the love of two immortal gods, only shorter. The liquid sky that covers these people and circumscribes their possibilities also lends to their environment a quick, gleaming splendor that would not, we suspect, be the climate of heaven. (A later poet will speak of the moist, 'dewy' freshness of the young Ganymede drying himself after a bath as a beauty and a sexuality gone from him from the moment that the god, out of love, gave him immortality, dooming his own passion.) Human excellence is seen, in Pindar's poem and pervasively in the Greek poetic tradition, as something whose very nature it is to be in need, a growing thing in the world that could not be made invulnerable and keep its own peculiar fineness. (The hero Odysseus chose the mortal love of an aging woman over Calypso's unchanging splendor.) The contingencies that make praise problematic are also, in some as yet unclear way, constitutive of that which is there for praising.`},
+
+{t:'p',x:`If this picture of the passive vine tree begins to strike us as incompatible with some aspiration we have for ourselves as human agents (and so it is likely to have struck this poem's audience), there is the consolation that, so far, Pindar has apparently left something out. However much human beings resemble lower forms of life, we are unlike, we want to insist, in one crucial respect. We have reason. We are able to deliberate and choose, to make a plan in which ends are ranked, to decide actively what is to have value and how much. All this must count for something. If it is true that a lot about us is messy, needy, uncontrolled, rooted in the dirt and standing helplessly in the rain, it is also true that there is something about us that is pure and purely active, something that we could think of as 'divine, immortal, intelligible, unitary, indissoluble, ever self-consistent and invariable'. It seems possible that this rational element in us can rule and guide the rest, thereby saving the whole person from living at the mercy of luck.`},
+
+{t:'p',x:`This splendid and equivocal hope is a central preoccupation of ancient Greek thought about the human good. A raw sense of the passivity of human beings and their humanity in the world of nature, and a response of both horror and anger at that passivity, lived side by side with and nourished the belief that reason's activity could make safe, and thereby save, our human lives — indeed, must save them, if they were to be humanly worth living. This need for a livable life preoccupied most of the early Greek thinkers, including some whom tradition calls philosophers and some who usually receive other titles (for example poet, dramatist, historian). Indeed, it was this need above all that seems to have motivated the founders of a human and ethical philosophy to press their search for a new art that would make progress beyond ordinary beliefs and practices; and the Greek philosophical tradition always remained centrally dedicated to the realization of a good human life, even, frequently, in its pursuit of metaphysical and scientific inquiries.`},
+
+{t:'p',x:`But on the other side of this pursuit of self-sufficiency, complicating and constraining the effort to banish contingency from human life, was always a vivid sense of the special beauty of the contingent and the mutable, that love for the riskiness and openness of empirical humanity which finds its expression in recurrent stories about gods who fall in love with mortals. The question of life-saving thus becomes a delicate and complicated one for any thinker of depth. It becomes, in effect, the question of the human good: how can it be reliably good and still be beautifully human? It was evident to all the thinkers with whom we shall be concerned that the good life for a human being must to some extent, and in some ways, be self-sufficient, immune to the incursions of luck. How far a life can and how far it should be made self-sufficient, what role reason plays in the search for self-sufficiency, what the appropriate kind of self-sufficiency is for a rational human life — these questions elicited and became a part of the general question: who do we think we are, and where (under what sky) do we want to live?`},
+
+{t:'p',x:`This book will be an examination of the aspiration to rational self-sufficiency in Greek ethical thought: the aspiration to make the goodness of a good human life safe from luck through the controlling power of reason. I shall use the word 'luck' in a not strictly defined but, I hope, perfectly intelligible way, closely related to the way in which the Greeks themselves spoke of tuchē. I do not mean to imply that the events in question are random or uncaused. What happens to a person by luck will be just what does not happen through his or her own agency, what just happens to him, as opposed to what he does or makes. In general, to eliminate luck from human life will be to put that life, or the most important things in it, under the control of the agent (or of those elements in him with which he identifies himself), removing the element of reliance upon the external and undependable that was captured in the plant image. And my general question will be, how much luck do these Greek thinkers believe we can humanly live with? How much should we live with, in order to live the life that is best and most valuable for a human being?`},
+
+{t:'n',x:`The problem of masculine and feminine pronouns has bothered me all through the writing of this manuscript. To use 'he or she' as the unmarked pronoun in every instance seemed intolerably cumbersome. To opt for 'he' everywhere seemed repugnant to my political sensibilities and also false to the current state of the language, where, increasingly, efforts are being made to give 'she' equal time. It also seems clear to me that in the contexts where 'he' most often would so occur in this book (referring back to 'the philosopher', 'the poet', 'the good agent'), its presence is far from being really unmarked: it does encourage the imagination to picture the character in question as male. Nor is this an irrelevant concern in writing about this material. For the tragedians all have a claim to be taken seriously as thinkers about the privileges and the moral status of women; in each of the plays that we shall discuss, a woman defends her claim to moral and political equality. Plato has a good claim to be called the first feminist philosopher though his position is more radical still: for it is the denial that the body, therefore gender, is of any ethical significance at all (cf. Ch. 5). He is also the first thinker I know who pointed out that feminism ought to lead to changes in unmarked linguistic gender. At Republic 540C, Socrates expresses concern that Glaucon's failure to use both masculine and feminine participles, when referring to the rulers, may give rise to the false impression that they are talking only about males. Aristotle's conspicuous anti-feminism is an issue that we shall discuss. My first idea, as I considered these questions, was to adopt the completely arbitrary 'solution' of using 'he' as unmarked in even-numbered chapters, 'she' in odd. But this proved distracting and harsh to readers of widely varying political beliefs. Nor, clearly, was it a solution that the natural language could ever adopt. I therefore decided, on reflection, to follow Plato's practice in the above-mentioned passage, by using 'he or she' fairly frequently, in order to remind the reader not to think of men only, but reverting (as Plato does) to the masculine in between, in order to avoid cumbersome sentence rhythms. I have also been sensitive to the context since there is no use pretending that 'he or she' is appropriate when speaking of an Aristotelian ruler as imagined by Aristotle; whereas there is great use in employing this form for Plato.`},
+
+{t:'p',x:`This question was, as I have said, central for the Greeks. I have already suggested that I believe it to be important for us as well. But in some periods of history it would have been thought not to be a genuine question at all. The enormous influence of Kantian ethics on our intellectual culture has led to a long-standing neglect of these issues in work on Greek ethics. When they are treated, it is often suggested that the way the Greeks pose the problems of agency and contingency is primitive or misguided. For the Kantian believes that there is one domain of value, the domain of moral value, that is altogether immune to the assaults of luck. No matter what happens in the world, the moral value of the good will remains unaffected. Furthermore, the Kantian believes that there is a sharp distinction to be drawn between this and every other type of value, and that moral value is of overwhelmingly greater importance than anything else. If these beliefs are all true, then an inquiry such as ours can only serve to uncover false beliefs about the important and true beliefs about the trivial. It can show that Greek thinkers held the false and primitive view that moral value is vulnerable to luck; and it can show that they had the true but relatively unimportant belief that other sorts of value are vulnerable. It will surely reveal, in the process, the primitive character of an ethical thought that does not even attempt to make a sharp distinction between moral value and other types of value. When the truth of these Kantian beliefs, and the importance of the Kantian distinction between moral and non-moral value, are taken as the starting-point for inquiry into Greek views of these matters, the Greeks do not, then, fare well. There appears to be something peculiar about the way they agonize about contingency, lamenting an insoluble practical conflict and the regret it brings in its wake, pondering the risks of love and friendship, weighing the value of passion against its destructive excesses. It is as if they were in difficulties because they had not discovered what Kant discovered, did not know what we Kantians all know.`},
+
+{t:'n',x:`There are of course several other post-classical views that would significantly affect the appreciation of these questions: for example Stoic and Christian views concerning divine providence and Christian views concerning the relationship between human goodness and divine grace. I focus on the influence of Kant because, as I shall go on to show (especially in Chapters 2, 11, 12, 13, and Interlude 2), Kantian views have profoundly affected the criticism and evaluation of these Greek texts; and it is the pervasive influence of these views in our time that constitutes the greatest obstacle to a proper estimation of the texts' importance. Except in Chapter 2, where I do discuss Kant's views about conflict of obligation, I speak of 'Kantians' and Kant's influence, rather than of Kant's usually more complex and subtle positions.`},
+
+{t:'n',x:`I shall, in fact, try to avoid not only the Kantian moral/non-moral distinction, but all versions of that distinction and of the related distinctions between moral and non-moral practical reasoning, moral and non-moral practical conflict. The Greek texts make no such distinction. They begin from the general question, 'How should we live?' and consider the claim of all human values to be constituent parts of the good life; they do not assume that there is any one group that has even a prima facie claim to be supreme. I believe that their approach is faithful to the way that our intuitive practical reasoning does in fact proceed, and that it recaptures aspects of our practical lives that tend to be obscured in works beginning from that distinction, however understood. In Chapter 2 I describe various versions of the distinction and show why they would be inappropriate starting-points for our inquiry. Our discussions of justice, civic obligation, and religious requirement are, however, intended to satisfy the convinced partisan of the distinction that our points about fragility apply even to values that would, on most versions of the distinction, standardly be considered as central moral values.`},
+
+{t:'p',x:`But if we do not approach these texts armed with a point of view from which their questions cannot even be seen, it proves difficult to avoid feeling, ourselves, the force of these questions.¹⁰ I begin this book from a position that I believe to be common: the position of one who finds the problems of Pindar's ode anything but peculiar and who has the greatest difficulty understanding how they might ever cease to be problems. That I am an agent, but also a plant; that much that I did not make goes towards making me whatever I shall be praised or blamed for being; that I must constantly choose among competing and apparently incommensurable goods and that circumstances may force me to a position in which I cannot help being false to something or doing some wrong; that an event that simply happens to me may, without my consent, alter my life; that it is equally problematic to entrust one's good to friends, lovers, or country and to try to have a good life without them all — these I take to be not just the material of tragedy, but everyday facts of lived practical reason.`},
+
+{t:'p',x:`On the other hand, it seems equally impossible, or equally inhuman, to avoid feeling the force of the Platonic conception of a self-sufficient and purely rational being, cleansed of the 'barnacles' and the 'seaweed' of passion, the 'many stony and wild things that have been encrusted all over it', freed from contingent limitations on its power. Plato shows us how Glaucon, an ordinary gentleman, discovers in himself, through conversation with Socrates, an intense love for the pure and stable activity of mathematical reasoning, a love that requires the denigration of much that he had previously valued. Even so, as we read and are gripped by these works, we are likely to recollect an aspiration to purity and to freedom from luck that is also a deep part of humanness and stands in a complex tension with other empirical perceptions. And if to feel this tension is not an idiosyncratic or rare experience, but a fact in the natural history of human beings, then good human practical reasoning about the self-sufficiency of the good life seems to require an inquiry that explores both pictures, feeling the power of each.`},
+
+{t:'p',x:`We shall be investigating the role played by luck in the area of human excellence and the activities associated with it, leaving aside the countless ways in which luck affects mere contentment or good feeling. Central to our inquiry will be three questions. The first concerns the role in the human good life of activities and relationships that are, in their nature, especially vulnerable to reversal. How much should a rational plan of life allow for elements such as friendship, love, political activity, attachments to property or possessions, all of which, being themselves vulnerable, make the person who stakes his or her good to them similarly open to chance? These 'external goods' can enter into the excellent life not only as necessary instrumental means to good living but also, if we value them enough, as ends in themselves; their contingent absence, then, may deprive the agent not only of resources but of intrinsic value itself and living well itself. Is all of this reason not to ascribe such value to them or to include them as components in a rational plan?`},
+
+{t:'n',x:`Excellence (aretē) should here be understood broadly, not as presupposing any separation of a special group of moral excellences; we so far include all features of persons in virtue of which they live and act well, i.e. so as to merit praise. We thus include, at the least, both what Aristotle would call 'excellences of character' (a group not equivalent to the 'moral virtues', although this phrase is the most common English translation — cf. Ch. 11) and Aristotle's other major group, the excellences of the intellect.`},
+
+{t:'n',x:`Some texts we shall discuss are rendered obscure on this point by the common translation of Greek 'eudaimonia' by English 'happiness'. Especially given our Kantian and Utilitarian heritage in moral philosophy, in both parts of which 'happiness' is taken to be the name of a feeling of contentment or pleasure, and a view that makes happiness the supreme good is assumed to be, by definition, a view that gives supreme value to psychological states rather than to activities, this translation is badly misleading. To the Greeks, eudaimonia means something like 'living a good life for a human being'; or, as a recent writer, John Cooper, has suggested, 'human flourishing'. Aristotle tells us that it is equivalent, in ordinary discourse, to 'living well and doing well'. Most Greeks would understand eudaimonia to be something essentially active, of which praiseworthy activities are not just productive means, but actual constituent parts. It is possible for a Greek thinker to argue that eudaimonia is equivalent to a state of pleasure; to this extent activity is not a conceptual part of the notion. But even here we should be aware that many Greek thinkers conceive of pleasure as something active rather than stative (cf. Ch. 5); an equation of eudaimonia with pleasure might, then, not mean what we would expect it to mean in a Utilitarian writer. The view that eudaimonia is equivalent to a state of pleasure is an unconventional and prima facie counterintuitive position in the Greek tradition (cf. Ch. 4). A very common position would be Aristotle's, that eudaimonia consists in activity according to excellence(s). In the terms of this view, then, we shall be investigating the ways in which luck affects eudaimonia and the excellences that are its basis. Where it is important for clarity of our argument, the Greek word will be left untranslated.`},
+
+{t:'p',x:`I shall also be leaving aside one part of the question about excellence, namely the luck of birth or constitution — the role of factors the agent does not control in endowing him with the various initial abilities requisite for living humanly well. I shall only assume, as the texts assume, that the answer to this question is not such as to close off all of our other questions.`},
+
+{t:'p',x:`Closely connected with the question about the individual constituents of the good life is our second question, which concerns the relationship among these components. Do they coexist harmoniously, or are they capable, in circumstances not of the agent's own making, of generating conflicting requirements that can themselves impair the goodness of the agent's life? If an agent ascribes intrinsic value to, and cares about, more than one activity, there is always a risk that some circumstances will arise in which incompatible courses of action are both required; deficiency therefore becomes a natural necessity. The richer my scheme of value, the more I open myself to such a possibility; and yet a life designed to ward off this possibility may prove to be impoverished. This problem is connected with the first in several ways. For a life centered around activities that are always in the agent's power to pursue regardless of circumstances will give few opportunities for conflict; and strategies of reason adopted to minimize conflict will significantly (as we shall see) diminish the fragility of certain important values, taken singly.`},
+
+{t:'n',x:`Anyone who is dubious about the use of the English word 'value' where Greek ethical texts are concerned will, I hope, be reassured as we go along, as it becomes clear why this is an appropriate notion to use to render certain Greek ethical terms. There is no one word for which 'value' is always and only the appropriate translation; but it is frequently the best word for certain uses of 'agathon', 'good', and especially 'kalon', 'fine', 'intrinsically good'. Other relevant locutions are 'that which is worthy (axion)', 'that which is choiceworthy (haireton)', and various verbal locutions involving words of estimating, esteeming, choosing.`},
+
+{t:'p',x:`We have spoken so far of what we might call 'external contingency' — of luck coming to the agent from the world outside of him, and from his own value system insofar as it links him to the outside. This will be the primary focus of our concern. But we must also raise a third problem, concerning the relationship between self-sufficiency and the more ungovernable parts of the human being's internal makeup. We will be led by our other two problems to ask, in particular, about the ethical value of the so-called 'irrational parts of the soul': appetites, feelings, emotions. For our bodily and sensuous nature, our passions, our sexuality, all serve as powerful links to the world of risk and mutability. The activities associated with the bodily desires not only exemplify mutability and instability in their own internal structure; they also lead us and bind us to the world of perishable objects and, in this way, to the risk of loss and the danger of conflict. The agent who ascribes value to activities connected with the appetites and emotions will eo ipso be depending on the external, upon resources and other persons, for his possibilities of ongoing good activity. Furthermore, these 'irrational' attachments import, more than many others, a risk of practical conflict and so of contingent failure in virtue. And even when passional activities are not deemed in themselves valuable, the passions can still figure as sources of disruption, disturbing the agent's rational planning as if from without and producing distortion of judgment, inconstancy or weakness in action. To nourish them at all is thus to expose oneself to a risk of disorder or 'madness'. We need to ask, then, whether a restructuring of the human being, a transformation or suppression of certain familiar parts of ourselves, could lead to greater rational control and self-sufficiency, and whether this would be the appropriate form of self-sufficiency for a rational human life.`},
+
+{t:'p',x:`To ask any of these three questions is, of course, also to ask about a conception of human reason. If it is reason, and reason's art, philosophy, that are supposed to save or transform our lives, then, as beings with an interest in living well, we must ask what this part of ourselves is, how it works to order a life, how it is related to feeling, emotion, perception. The Greeks characteristically, and appropriately, link these ethical questions very closely to questions about the procedures, capabilities, and limits of reason. For it is their instinct that some projects for self-sufficient living are questionable because they ask us to go beyond the cognitive limits of the human being; and, on the other hand, that many attempts to venture, in metaphysical or scientific reasoning, beyond our human limits are inspired by questionable ethical motives, motives having to do with closedness, safety, and power. Human cognitive limits circumscribe and limit ethical knowledge and discourse; and an important topic within ethical discourse must be the determination of an appropriate human attitude towards those limits. For both of these reasons our ethical inquiry will find it necessary to speak about first principles, truth, and the requirements of discourse.`},
+
+{t:'p',x:`This book will describe, usually in historical order, a sequence of interrelated reflections on these problems in works of the three great tragic poets, Plato, and Aristotle. Rather than attempting a systematic account of what every major Greek thinker had to say on this question, I have chosen to study in detail a group of texts that seem to me salient and representative. To summarize briefly, I shall describe the exploration of our problems in several fifth-century tragedies, which will insist on the irreducible role of luck in shaping human life and its value; then, Plato's heroic attempt, in middle-period dialogues, to save the lives of human beings by making them immune to luck; finally, Aristotle's return to many of the insights and values of tragedy, as he articulates a conception of practical rationality that will make human beings self-sufficient in an appropriately human way. But this simple structure is complicated by the fact that all of these works contain within themselves more than one position on the issues. The tragedies characteristically show a struggle between the ambition to transcend the merely human and a recognition of the losses entailed by this ambition. Nor do Plato's dialogues simply argue for their revisionary ethical conception; instead Plato uses the dialogue form to show us a confrontation of positions, making clear to us what any 'solution' risks losing or giving up. And in the later Phaedrus we see in addition, as I shall argue, an explicit criticism of the way in which the opposition of positions itself had been conceived in early dialogues. Aristotle's announced procedure is to work through conflicting positions, assessing and responding to their force; nor is his own 'solution' without its inner tensions and divisions. This all means that, although the account will have an overall direction, the movement between ambition and return, transcendence and acceptance, is also present, at the same time, in almost every individual section.`},
+
+{t:'p',x:`In Chapters 2 and 3, I consider the depiction of human exposure to fortune in three tragedies, particularly with reference to the problem of contingent conflict of values. (Consideration of this problem leads, however, into a discussion of the fragility of certain individual values, since it emerges that the values that most often generate conflict are also among the most vulnerable, taken singly.) Especially in Chapter 2, I try to show ways in which a Kantian approach to problems of luck has impeded our understanding of the Greek texts; I present the Aeschylean characterization of the problems as a compelling alternative to Kantian and related accounts. In Chapter 3, extending these reflections about individual cases of practical conflict, I look at the aspiration to plan the entire course of a life so as to minimize the risk of such conflicts. I find more than one form of this aspiration in Sophocles' Antigone. I examine the play's depiction of values as plural and incommensurable, its criticisms of the human ambition to master luck by simplifying our commitments to value. At the same time I try to show the underlying continuity between Aeschylus and Sophocles in their approach to the issues.`},
+
+{t:'p',x:`In Chapter 4, turning to Plato, I argue that the account of a science of practical reasoning in the Protagoras is a response to the same problems that had preoccupied the tragedians and a development of strategies for the defeat of luck that had been proposed within their dramas. This chapter is particularly important not only because it shows this continuity between Plato's motivations and the literary tradition, but also because it displays clearly the interrelationships among our three problems, showing how a strategy adopted for the elimination of incommensurability and conflict among values also renders individual values more stable. Furthermore, by reshaping the nature of our attachments, it transforms the passions, our internal sources of disorder. Chapters 5 and 6 show how Plato develops these ideas in dialogues of his middle period: Phaedo, Republic, and Symposium. (The first transitional Interlude raises questions about the dialogue form as an alternative to tragic drama, showing how Plato's choice of literary form is closely bound up with his views about ethical content.) Chapter 5 analyzes the defense, in Phaedo and Republic, of a life of self-sufficient contemplation, in which unstable activities and their objects have no intrinsic value. Chapter 6 studies the Symposium's account of these issues in the area of personal love. Although these chapters are most prominently concerned with the vulnerability of individual values, the problem of value conflict is never far away; its relevance to the Republic's arguments is discussed at the end of Chapter 5.`},
+
+{t:'p',x:`Chapter 6 shows how deeply Plato's account of love responds to the beauty of human fragility, even while motivating us to abandon it for a more stable beauty. In this way it prepares for Chapter 7's argument that the Phaedrus questions and modifies Plato's earlier conception of value. I argue that the Phaedrus gives a prominent place in the good life, both as instrumental means and as intrinsically valuable components, to passionate relationships between individuals, relationships that are by their very nature fragile. I assess Plato's self-critical arguments and this new account of human goodness.`},
+
+{t:'p',x:`The Aristotle section begins with a discussion of Aristotle's philosophical method, since his general views about the relationship between philosophical theory and ordinary human belief play an important role in his treatment of ethical problems. Chapter 9 examines Aristotle's account of 'voluntary' motion and action, asking what relationship to happenings in the world our movements must have in order for ethical attitudes and practices to be appropriately directed at them. Chapter 10 looks at the account of practical rationality that Aristotle relies on when he presents his anti-Platonic picture of human self-sufficiency, asking from what standpoint and by what procedures good Aristotelian ethical judgments are made. This chapter is, then, a counterpart to Chapter 4's account of Plato's epistemology of value; we shall see how Aristotle's different epistemology is associated with his different account of the content of human value. We shall also refer back to the Platonic ideal of ethical science first articulated in Chapter 4, asking what Aristotle means by his repeated claim that human practical reasoning is not and should not be scientific. Chapters 11 and 12 deal with the fragility of individual components of the best human life. They ask in what ways the Aristotelian best life is vulnerable to external happenings and how Aristotle argues that a life so vulnerable is, nonetheless, the best. Chapter 11 examines the vulnerability of good human activity in a general way; Chapter 12 looks at two particular cases of vulnerable good activity, namely political activity and personal love. Both chapters contain related discussion of the Aristotelian view of conflict among values. Transitional Interlude 2 then examines the implications of all of this for Aristotle's view of the role of tragedy and the tragic emotions in human learning.`},
+
+{t:'p',x:`Chapter 13 returns to fifth-century tragedy with a reading of the Hecuba of Euripides, which shows the vulnerability of good character itself to corruption through chance reversal. Although its argument relies only upon contemporary fifth-century material, its placement at the end of the book will help to show the continuity between Aristotle's enterprise and the tragic tradition to which he himself ascribes such high importance.`},
+
+{t:'p',x:`The conception of ethical theory on which I rely, as I base this philosophical inquiry on the exegesis of historical texts, is, roughly, an Aristotelian one, the one that is explored and defended in Chapter 8. It holds that ethical theorizing proceeds by way of a reflective dialogue between the intuitions and beliefs of the interlocutor, or reader, and a series of complex ethical conceptions, presented for exploration. (This series, as Aristotle puts it, should ideally include the views of both 'the many' and 'the wise'.) Such an inquiry cannot get started without readers or interlocutors who are already brought up as people of a certain sort. Its aim is to arrive at an account of the values and judgments of people who already have definite attachments and intuitions; these must, ultimately, be the material of the inquiry. And yet this does not mean that the outcome of inquiry will be a mere repetition of the account of his or her view that the reader would have given at the start. For, as Aristotle stresses (and as Socrates showed before him), most people, when asked to generalize, make claims that are false to the complexity and the content of their actual beliefs. They need to learn what they really think. When, through work on the alternatives and through dialogue with one another, they have arrived at a harmonious adjustment of their beliefs, both singly and in community with one another, this will be the ethical truth, on the Aristotelian understanding of truth: a truth that is anthropocentric, but not relativistic. (In practice the search is rarely complete or thorough enough; so the resulting view will just be the best current candidate for truth.) To bridge the gap between belief and theory, it is frequently valuable to work from texts, leading the interlocutor through an elucidation and assessment of someone else's complex position or, better, of several alternative positions on the problem in question. This gives a degree of detachment from our theoretical prejudices; and if we make our selection of texts carefully enough we can hope to have explored the major alternatives.`},
+
+{t:'n',x:`Both Aristotle and Socrates believe that the best articulation of each individual's internal system of beliefs will also be an account shared by all individuals who are capable of seriously pursuing the search for truth. This is so because they believe that the outstanding obstacles to communal agreement are deficiencies in judgment and reflection; if we are each led singly through the best procedures of practical choice, we will turn out to agree on the most important matters, in ethics as in science. I believe that this position is substantially correct. Although I shall not argue directly for it here, examples of the method at work and further discussions of the method as Aristotle defends it should show its force. Difficulties arising from disagreement concerning 'the best procedures of practical choice' and the threat of circularity these generate are discussed further in Chapters 8 and 10.`},
+
+{t:'p',x:`Since the Greek material, however diverse, presents only some of the available ethical alternatives, and since important rival conceptions, above all Kant's, will not be closely studied here, this project is only a small part of the larger Aristotelian project. It will become clear that the conclusions of this inquiry are conclusions that I find appealing. I believe, on the basis of my thought about these matters so far, that they have a strong claim to ethical truth, in the Aristotelian sense. But I do not claim that they represent the completion of this larger project.`},
+
+{t:'p',x:`If my method is Aristotelian, doesn't this bias my whole inquiry in the direction of Aristotelian conclusions? If there is, as seems likely, a non-accidental connection between Aristotle's procedures and their outcome, isn't this just a confession that I am going to be heading towards this outcome? There is a deep problem here. The Aristotelian method claims to be fair to all the competing beliefs and conceptions: so in this sense it claims to be fair to Platonism. But Plato does not ascribe much value to this sort of even-handed fairness. He argues, first, that only a very few people are in a position to engage in serious ethical reflection and choice; the others should simply be told what to do. The standpoint from which correct judgments are made is one far removed from the situation of the ordinary human being. And, second, he holds that some ethical positions, for example some of the views developed in tragedy, are so harmful to the soul that they should not be considered at all by anyone in a well-ordered city. So in another sense any procedure that is so respectful and even-handed towards so many things and so many people, any procedure that holds his views up to 'the many', and side by side with the views of the tragic poets, cannot, perhaps, be fair to his views as he understands fairness.`},
+
+{t:'p',x:`My commitment to proceed in an Aristotelian way is as deep as any commitment I have; I could not possibly write or teach in another way. Furthermore, I offer, in Chapter 8, a defense of the method that is at least partially non-circular; I defend the remaining circularity as rich and interesting (Ch. 10); and in Chapter 8 I argue that Plato shares more of Aristotle's methodological concerns than this summary indicates. For now, I can only invite the reader to be sensitive, at each stage, to the ways in which my method influences the outcome. In this way, the Platonist challenge against the method itself can be more sympathetically assessed and its connection with Platonist conclusions better understood.`},
+
+{t:'p',x:`There is one obvious difference between the way in which some recent philosophers, for example Sidgwick and Rawls, have pursued an Aristotelian ethical inquiry and my procedure here. This is that I have chosen to consult certain texts, namely four tragic dramas, that are traditionally considered to be works of 'literature' rather than works of 'philosophy'. It is customary to take these to be texts of quite different sorts, bearing in quite different ways on human ethical questions. This was clearly not the view of the Greeks. For them there were human lives and problems, and various genres in both prose and poetry in which one could reflect about those problems. Indeed, epic and tragic poets were widely assumed to be the central ethical thinkers and teachers of Greece; nobody thought of their work as less serious, less aimed at truth, than the speculative prose treatises of historians and philosophers. Plato regards the poets not as colleagues in another department, pursuing different aims, but as dangerous rivals. His own creation of a way of writing that we deem 'philosophical' is linked with specific views about the good life and the human soul; we do his arguments against tragedy serious injustice by taking the distinction between philosophy and literature for granted and by assuming without argument that literary works are dispensable in an inquiry that aims at ethical truth. We shall discuss Plato's assault on the tragedians below, in the first Interlude; the issues are further pressed in several chapters, especially Chapters 2, 3, and 7, and Interlude 2. But we should make some preliminary remarks now about the importance of literary works for our study. (These remarks should not be read as taking the distinction itself for granted; they address themselves to our conventional grouping of texts, without endorsing it.) The classicist or the literary reader will probably be convinced in advance that these works have a serious claim to human truth and insight. But the reader who approaches the book from the perspective of a philosophical tradition (especially our Anglo-American tradition) will have unanswered questions. Why should this attempt to work through prominent alternative views on an ethical problem turn to dramatic poems instead of confining itself to the works of admitted philosophers? Why should a book that associates itself with the Aristotelianism of Sidgwick and Rawls use texts of a type that neither Sidgwick nor Rawls included within their examination of the ethical tradition? Aren't these texts really dispensable?`},
+
+{t:'p',x:`First, even if our aim were only to uncover the thought of Plato and Aristotle about our problems, it would be very important to examine the tradition of poetic ethical reflection in which their work takes root and against which they define themselves. Nothing has emerged more clearly for me during my work on this book than the importance of viewing Plato's thought, in particular, as a response to this complex cultural tradition, motivated by its problems and preoccupations. Furthermore, Plato's writing so continually alludes to his poetic context in its choice of image, story, and turn of phrase that the meaning of many salient details is lost on us if we do not try to approach him in awareness of this context.`},
+
+{t:'p',x:`But I do not intend to study the tragedies only instrumentally, towards the end of a better understanding of Plato. Nor do I intend to study them only in order to record a background of popular thought against which the philosophers sought the truth. My Aristotelian method would in any case make a study of popular thought more directly relevant to the search for truth than many historians of Greek popular morality think it is. But such a systematic and comprehensive historical study, for a culture whose morality survives, for the most part, only through texts of literary excellence, presents enormous problems of evidence and is well beyond the scope of this book. I intend, then, to study the works of the tragic poets as Plato studied them: as ethical reflection in their own right, embodying in both their content and their style a conception of human excellence. In other words, although I shall certainly speak about the relationship of these works to the thought of the 'many' where this can be somehow ascertained, I shall regard them as creations of the 'wise', as works of distinction to which a culture looked for insight. For this procedure I can offer two different types of prima facie arguments. The first concerns the value of these texts for work on the particular ethical issues with which I am concerned here; the second will defend the value of texts similar to these for work on any ethical issue whatever.`},
+
+{t:'p',x:`Tragic poems, in virtue of their subject matter and their social function, are likely to confront and explore problems about human beings and luck that a philosophical text might be able to omit or avoid. Dealing, as they do, with the stories through which an entire culture has reflected about the situation of human beings and dealing, too, with the experiences of complex characters in these stories, they are unlikely to conceal from view the vulnerability of human lives to fortune, the mutability of our circumstances and our passions, the existence of conflicts among our commitments. All of these facts a philosophical work of the type most familiar in our tradition, one that does not focus intently on the stories of concrete characters, can lose from view in the pursuit of systematic considerations or to the end of greater purity. This has frequently happened, both in the Greek tradition and in our own. In order to illustrate this point I shall, in the following chapter, juxtapose the reflections of two Greek tragedies on practical conflict with the purported solutions to this problem offered in several recent philosophical texts, whose influence has combined with the influence of Plato to distance many thinkers from the tragic views. This juxtaposition will help us both to see the tragedies more clearly and to recover for ourselves a motive for turning to tragedy. If our desire is to explore alternative conceptions and if the tragic, by its nature, presents a distinctive perspective concerning these issues, then this is by itself reason to be suspicious of conventional disciplinary boundaries and to consider tragic poetry as, itself, a part of ethical investigation.`},
+
+{t:'p',x:`It is not, however, a sufficient reason. For the aim of providing reflection about luck with this complex and concrete content might be satisfied by the use, inside traditional philosophical discourse, of examples drawn from tragic poetry or myth. We must do more to show why we want, instead, to read the tragedies whole and to discuss them in all their poetic complexity. Is there, then, in the very fact that they are complex tragic poems some possibility for a distinctive contribution to our inquiry? Much of this must emerge from the chapters. But we can say provisionally that a whole tragic drama, unlike a schematic philosophical example making use of a similar story, is capable of tracing the history of a complex pattern of deliberation, showing its roots in a way of life and looking forward to its consequences in that life. As it does all of this, it lays open to view the complexity, the indeterminacy, the sheer difficulty of actual human deliberation. If a philosopher were to use Antigone's story as a philosophical example, he or she would, in setting it out schematically, signal to the reader's attention everything that the reader ought to notice. He would point out only what is strictly relevant. A tragedy does not display the dilemmas of its characters as pre-articulated; it shows them searching for the morally salient; and it forces us, as interpreters, to be similarly active. Interpreting a tragedy is a messier, less determinate, more mysterious matter than assessing a philosophical example; and even when the work has once been interpreted, it remains unexhausted, subject to reassessment, in a way that the example does not. To invite such material into the center of an ethical inquiry concerning these problems of practical reason is, then, to add to its content a picture of reason's procedures and problems that could not readily be conveyed in some other form.`},
+
+{t:'p',x:`Here again, it is not clear that this constitutes a sufficient argument for the use of tragic poems in our inquiry. For as we examine the Platonic and Aristotelian conceptions (someone might say) we could surely hold them up for assessment, if not only against schematic examples, then also against the data of each reader's own experience. For that experience surely will have all the indeterminacy and difficulty that is relevant for an inquiry that asks how much difficulty there really is in our ethical relationship to luck. (We might put this question in historical terms by asking why Aristotle, who insists on the central role of experience in practical wisdom, should also insist on the importance of tragic poems as a part of each citizen's moral education; this we shall do in Interlude 2.) Certainly an important part of the search for truth here will be each reader's testing of the text against his own ethical experience and intuitions. But, unlike each person's experience, the tragic poem is available equally to all readers as they consult about the good life. It is, furthermore, a carefully crafted working-through of a human story, designed to bring certain themes and questions to each reader's attention. It can therefore advance the conversation among readers that is necessary to the completion of the Aristotelian project, whose aims are ultimately defined in terms of a 'we', of people who wish to live together and share a conception of value. A tragic poem will be sufficiently distant from each reader's experience not to bring to the fore bias and divisive self-interest; and yet (if we do the hard historical work required to bring out the extent to which we do and do not share the perplexities of the Greeks) it can count as a shared extension of all readers' experience. It can, then, promote self-inquiry while also facilitating cooperative discussion. In short, it has all the advantages for which we turned to texts, to the 'wise', in the first place, in addition to the special ones that are contributed by its poetic character.`},
+
+{t:'n',x:`The answer to this question cannot be given all at once, but can only emerge out of the work on particular cases. I shall simply assert here my belief that Nietzsche was correct in thinking that a culture grappling with the widespread loss of Judaeo-Christian religious faith could gain insight into its own persisting intuitions about value by turning to the Greeks. When we do not try to see them through the lens of Christian beliefs we can not only see them more truly; we can also see how true they are to us — that is, to a continuous historical tradition of human ethical experience that has not been either displaced or irreversibly altered by the supremacy of Christian (and Kantian) teaching. The problems of human life with which this book deals have not altered very much over the centuries; and if we do not feel required to depict the Greek responses to them as primitive by contrast to something else, we can see how well the Greeks articulate intuitions and responses that human beings have always had to these problems. We will see the element of continuity best, however, if we are careful to point out the respects in which history has altered the face of the problem.`},
+
+{t:'p',x:`Tragic poetry, then, can bring to an inquiry about luck and human goodness a distinctive content that might be missed if we confined ourselves to conventionally admitted philosophical texts; it will make this contribution best if studied at length in all of its poetic complexity. This content is not separable from its poetic style. To become a poet was not regarded by the Greeks, nor should it be regarded by us, as an ethically neutral matter. Stylistic choices — the selection of certain metres, certain patterns of image and vocabulary — are taken to be closely bound up with a conception of the good. We, too, should be aware of these connections. As we ask which ethical conception we find most compelling, we should ask what way or ways of writing most appropriately express our aspiration to be humanly rational beings.`},
+
+{t:'p',x:`And this brings us to our second line of argument. For we can now begin to see reasons why poetic works might be indispensable to an Aristotelian ethical project, even independently of our specific ethical questions. Our Anglo-American philosophical tradition has tended to assume that the ethical text should, in the process of inquiry, converse with the intellect alone; it should not make its appeal to the emotions, feelings, and sensory responses. Plato explicitly argues that ethical learning must proceed by separating the intellect from our other merely human parts; many other writers proceed on this assumption, with or without sharing Plato's intellectualistic ethical conception. The conversation we have with a work of tragic poetry is not like this. Our cognitive activity, as we explore the ethical conception embodied in the text, centrally involves emotional response. We discover what we think about these events partly by noticing how we feel; our investigation of our emotional geography is a major part of our search for self-knowledge. (And even this puts matters too intellectualistically: for we shall be arguing that emotional response can sometimes be not just a means to practical knowledge, but a constituent part of the best sort of recognition or knowledge of one's practical situation.)`},
+
+{t:'p',x:`It is often simply assumed that this fact about tragic poetry in particular, literary texts in general, makes these texts inappropriate for use inside a serious ethical inquiry. Even Iris Murdoch, one of the few contemporary Anglo-American philosophers who is also a distinguished literary writer, claims that the philosophical style, the style that seeks truth and understanding rather than mere entertainment, will be pure of non-intellectual appeals:`},
+
+{t:'q',x:`Of course philosophers vary and some are more 'literary' than others, but I am tempted to say that there is an ideal philosophical style which has a special unambiguous plainness and hardness about it, an austere unselfish candid style. A philosopher must try to explain exactly what he means and avoid rhetoric and idle decoration. Of course this need not exclude wit and occasional interludes; but when the philosopher is as it were in the front line in relation to his problem I think he speaks with a certain cold clear recognizable voice.`},
+
+{t:'p',x:`Murdoch seems to assume that there is a philosophical style that is content-neutral, suitable for the fair investigation of all alternative conceptions. She assumes as well that this style is the style of plain hard reason, pure of appeals to emotion and sense. This idea, dominant in our philosophical tradition, can be traced back at least as far as Locke, who writes that the rhetorical and emotive elements of style are rather like a woman: amusing and even delightful when kept in their place, dangerous and corrupting if permitted to take control. But such assumptions simply put aside a question about the nature of the search for wisdom: what parts of the person does, should, it engage, and how are these interrelated? Plato, the main creator of the style that Murdoch describes, did not put aside this question. He believed that the 'plain', 'hard' style expressed a definite ethical conception, and that fairness to a different conception required a different style. If this is true, an Aristotelian inquiry cannot claim to have been fair to all of the alternatives so long as its own style, and its choice of style in texts, expresses, throughout, a conception of rational inquiry in which emotion and imagination play, at best, a decorative and subsidiary role. If we allow these elements of our personality to play a role in the conversation — and we can most easily do this by examining texts that call upon them — then we will be more likely to have a full and balanced assessment of the ethical alternatives.`},
+
+{t:'p',x:`We encounter here, as we did when we spoke of method, a deep difficulty. For this inquiry is itself a piece of writing and must choose how to make its appeal to, establish its conversation with, the reader. As we read texts that vary in style we must select, ourselves, a way to write about them; this writing, like the choice of texts, will have an important influence on the nature of that conversation. It is tempting to allow ourselves to be drawn into a familiar skeptical argument. If we are to adjudicate between competing conceptions of learning and writing, as embodied in poetic and philosophical texts, we need a criterion, in our own writing, that will allow us to make an unbiased judgment. But in order to know what sort of inquiry, what sort of writing, will provide the criterion of adjudication, we must already have settled the question in favor of one conception or another. We can inquire either in the hard 'philosophical' style or in a mode of writing that lies closer to poetry and makes its appeal to more than one 'part' of the person; or we can use different styles in different parts of the inquiry. But no way is neutral, and it looks as if any choice will prejudice the inquiry in its own favor.`},
+
+{t:'p',x:`It is obviously fatal to accept this demand for an Archimedean point and for a pure, uninterpretative, translucent art of writing. No such point and no such art are available to us, either here or with respect to other related questions. And yet, as in the case of method, the critic is making a fair request insofar as he or she demands greater self-consciousness as we proceed. If objectivity is to be attained here, it must be by patient explicitness about the possible sources of bias in the inquiry. Too many inquiries into the philosophical value of the literary get derailed at the start by working exclusively, and without examination, in a conventionally philosophical style which strongly indicates that the inquirer knows ahead of time what rationality is and how to express it in writing. The best way of approaching this issue that now seems to me to be within my power as a writer is to attempt to vary the way of writing so that it will be appropriate to the ethical conception to which it responds in each case; to try to show in my writing the full range of my responses to the texts and to evoke similar responses in the reader. There are limits to this. I hope that the writing as a whole exemplifies certain virtues to which I am committed; and I have not, in thinking how to write, tried to give equal time to the opposites of those virtues, for example to stinginess and cautious retentiveness. As in the case of method, some commitments are too deep to be regarded from a perspective of neutrality. The book's stylistic flexibility is limited, too, by the fact that I am obviously writing reflective criticism about poetry, rather than poetry itself (cf. Interlude 2). My writing, then, will remain always committed to the critical faculties, to clarity and close argument. It will also make explicit many connections that remain implicit in the poems. But I also try to deal with tragic (and Platonic) images and dramatic situations in such a way that the reader will feel, as well as think, their force. If, then, I sometimes write 'poetically' it is because I have decided that no other way of writing could at this point be as fair to the claims of the text and the conception being investigated.`},
+
+{t:'p',x:`The reader who wishes to trace these questions of style through the book will find them discussed in several chapters. Chapters 2 and 3 comment throughout on the contributions made by tragic form and style to the investigation of our problems. Interlude 1 examines Plato's positive debt to tragic drama and his reasons for breaking with this style. Chapter 6 continues these reflections, showing how the Symposium links its participants' views of erōs with their stylistic views and choices. Chapter 7 argues that in the Phaedrus Plato's change of ethical position is accompanied by changes in the theory and practice of writing. This chapter continues the discussion of Plato's explicit criticism of the poets that was begun in Interlude 1, showing how the Phaedrus responds to those criticisms. Finally, Interlude 2, in the Aristotle section, returns to these issues, showing how Aristotle's criticism of Plato's ethical views is closely linked to a high regard for tragic style and tragic action as sources of ethical learning.`},
+
+{t:'p',x:`We can now sketch, in a proleptic way, some of the concrete results of this juxtaposition of the philosophical texts with some of their literary predecessors. This can most vividly be done by situating them in relation to the claims of two recent studies. In his recent survey of the history of Greek philosophy, Bernard Williams concludes a section on the ethical thought of Plato and Aristotle with some remarks about luck and rational self-sufficiency:`},
+
+{t:'q',x:`A deeper sense of exposure to fortune is expressed elsewhere in Greek literature, above all in tragedy. There the repeated references to the insecurity of happiness get their force from the fact that the characters are displayed as having responsibilities, or pride, or obsessions, or needs, on a scale which lays them open to disaster in corresponding measure, and that they encounter those disasters in full consciousness. A sense of such significances, that what is great is fragile and that what is necessary may be destructive, which is present in the literature of the fifth century and earlier, has disappeared from the ethics of the philosophers, and perhaps altogether from their minds... Greek philosophy, in its sustained pursuit of rational self-sufficiency, does turn its back on kinds of human experience and human necessity of which Greek literature itself offers the purest, if not the richest, expression.`},
+
+{t:'q',x:`If there are features of the ethical experience of the Greek world which can not only make sense to us now, but make better sense than many things we find nearer to hand, they are not all to be found in its philosophy. Granted the range, the power, the imagination and inventiveness of the Greek foundation of Western philosophy, it is yet more striking that we can take seriously, as we should, Nietzsche's remark: 'Among the greatest characteristics of the Hellenes is their inability to turn the best into reflection.'`},
+
+{t:'p',x:`Williams's claims fit well with some of the arguments I have already given for the inclusion of tragedies in this study. But if he were right the study could end with those three chapters: for the philosophers, intent upon the pursuit of self-sufficiency in a way that he elsewhere calls 'bizarre', simply fail to feel the force of tragic problems and the pull of tragic values. These problems and values have altogether 'disappeared' from their work.`},
+
+{t:'p',x:`The continuity between Greek tragedy and Greek philosophy on these questions is, however, far greater than Williams has allowed. On the one hand, inside tragedy itself we find arresting portrayals of the human ambition to rational self-sufficiency; we come to understand the ways in which problems of exposure motivate this ambition. On the other, Plato's philosophical search for a self-sufficient good life is motivated by a keen sense of these same problems. Far from having forgotten about what tragedy describes, he sees the problems of exposure so clearly that only a radical solution seems adequate to their depth. Nor is he naïve about the costs of this solution. I shall argue that in dialogues such as Protagoras and Symposium he acknowledges that the attainment of self-sufficiency will require giving up much of human life and its beauty, as we empirically know it. I shall argue, too, that in later works Plato develops a deep criticism of the ambition to self-sufficiency itself; this criticism continues the criticism of human ambition that we find in tragedy (cf. Ch. 7, esp. n. 36). In Part III I shall then show how Aristotle attempts to satisfy some of the claims of ambition without a tragic loss in specifically human value. He articulates a conception of self-sufficiency that is appropriate to a limited human life and, with it, a view of human value that is closely related to elements of the picture that we will have discovered in the tragedies. The conclusion ought to be that the Greeks did, pace Nietzsche, turn their best into reflection in all of its range and complexity.`},
+
+{t:'p',x:`In another recent study of Greek ideas about practical reason, the perspective appears to be reversed. In Les Ruses de l'intelligence: la mētis des Grecs, Jean-Pierre Vernant and Marcel Detienne agree with Williams that Greek philosophy fails to give an adequate account of the exposure of human value and human reason to luck; they agree with him that certain very important areas of human life are completely absent from the minds of the philosophers, areas that are better characterized in non-philosophical texts. But there the similarity ends. For while Williams believes the philosophical tradition to be obsessed with the pursuit of practical self-sufficiency, Detienne and Vernant believe this to be the obsessive aim of the extra-philosophical tradition. They argue that there are in Greek thought two distinct and opposed conceptions of human reason. There is the speculative reason of the philosophers, which concerns itself with stable objects and with abstract contemplation. This reason does not need to worry about exposure and control, since its objects are from the beginning invulnerably stable. Indeed, it has no practical concerns at all. (They never suggest that practical worries provided the original motivation for the philosophers' position.) On the other hand, there is the practical reason of generations of extra-philosophical texts, a versatile and resourceful type of intelligence that concerns itself with mutable objects and with a world of concrete particulars. The goal of this type of reason, which they associate with the word 'mētis' (as well as with related words such as 'dolos' and 'technē') is, using clever stratagems, to subdue and master the elusive objects of the external world. Salient images for this aim are images of hunting and trapping, fishing and snaring, yoking, binding. This account of the aims of extra-philosophical reason resembles Williams's account of the philosophers' goal: what is sought is self-sufficiency, the elimination of the power of ungoverned luck. Detienne and Vernant do insist on the elusiveness of mastery; the images suggest that, even achieved, it will often be unstable and of short duration. But they insist that for the tradition it is reason's single most valued goal and an unequivocally fine thing.`},
+
+{t:'p',x:`My account will differ from theirs in two ways. First, I shall argue that the Platonic conception of the life of reason, including its emphasis upon stable and highly abstract objects, is itself a direct continuation of an aspiration to rational self-sufficiency through the 'trapping' and 'binding' of unreliable features of the world that is repeatedly dramatized in pre-Platonic texts. Plato's own images for his philosophical endeavor reveal that he himself saw this continuity of aim. But at the same time I shall argue that this ongoing picture of reason is not, in the Greek tradition, the only salient model of reason in its relation to luck. What both mētis and Platonic self-sufficiency omit is a picture of excellence that is shown to us in the traditional image of aretē as plant: a kind of human worth that is inseparable from vulnerability, an excellence that is in its nature other-related and social, a rationality whose nature it is not to attempt to seize, hold, trap, and control, in whose values openness, receptivity, and wonder play an important part. We shall find, I believe, that at every stage in the chronological development, the picture of reason as hunter is opposed, criticized, constrained by variants of this other picture, which urge on us the value of just that exposure that mētis seeks to eliminate. (This, I believe, is the point that Williams finds in tragedy: the recognition not just of the fact of exposure, but also of its value.) In this picture hunting and trapping are not merely difficult: they are inappropriate aims for a human life (cf. Ch. 7, n. 36).`},
+
+{t:'p',x:`Lists are no substitutes for argument; these associations will all be further explored in our arguments; but a list may help us to keep our eye on the continuously developing imagery in these two normative conceptions of human practical rationality:`},
+
+{t:'t',rows:[
+  ['agent as hunter, trapper, male','agent as plant, child, female (or with elements of both male and female)'],
+  ['agent as purely active','agent as both active and passive/receptive'],
+  ['aim: uninterrupted activity, control; elimination of the power of the external','aim: activity and receptivity; limited control balanced by limited risk; living well within a world in which the external has power'],
+  ['soul as hard, impenetrable','soul as soft, porous, though with a definite structure'],
+  ['trust reposed only in the immutable and altogether stable','trust reposed in the mutable and unstable'],
+  ['intellect as pure sunlight','intellect as flowing water, given and received'],
+  ['solitary good life','good life along with friends, loved ones, and community']
+]},
+
+{t:'n',x:`It is important to notice that B is not the polar opposite of A: it is the balanced combination of the elements stressed and cultivated in A with the elements that A avoids and shuns.`},
+
+{t:'p',x:`If the reader keeps some of these oppositions in mind, they may help to bring together the material in the different parts — showing, among other things, how thoroughly rooted Plato's imagery is in its cultural tradition. My argument will be, very roughly, that tragedy articulates both norms, A and B, criticizing A with reference to the specifically human value contained only in B; that Plato, finding the risks involved in B intolerable, develops a remarkable version of A, and then himself criticizes it as lacking in some important human values; that Aristotle articulates and defends a version of B, arguing that it meets our deepest practical intuitions about the proper relationship to luck for a being who is situated between beast and god and who can see certain values that are available to neither.`}
+
+  ]
+};
+
+/* ============================================================
+   2. GEMINI API CONFIG
+   Inside Google AI Studio / Gemini Canvas leave API_KEY as "".
+   Outside Canvas, paste a key here to run it standalone.
+   ============================================================ */
+var API_KEY    = '';
+var API_ROOT   = 'https://generativelanguage.googleapis.com/v1beta/models/';
+var TEXT_MODEL = 'gemini-2.5-flash';
+var TTS_MODELS = { flash:'gemini-2.5-flash-preview-tts', pro:'gemini-2.5-pro-preview-tts' };
+var VOICE      = 'Aoede';
+var TTS_STYLE  = 'Read the following aloud as a calm, articulate audiobook narrator. Unhurried pace, clear diction, natural prosody.\n\n';
+var PARA_MAX   = 1400;
+var SEL_MAX    = 2500;
+
+/* ============================================================
+   3. STATE  (single source of truth)
+   ============================================================ */
+var state = {
+  dict: false,
+  panelOpen: false,
+  bookmarks: [],
+  gran: 'sent',
+  ttsModel: 'flash',
+  mode: 'article',          /* 'article' | 'sel' */
+  unit: -1,
+  playing: false,
+  status: 'ready',
+  message: '',
+  sel: null                 /* { text, ctx } */
+};
+
+var SENTS = [];             /* SENTS[blockIndex] = [sentence, ...]  (spoken text) */
+var UNITS = [];             /* { b, s0, s1, text } */
+var audioCache = new Map();
+var explainCache = new Map();
+var audioEl = new Audio();
+var hoverTimer = null, selTimer = null;
+var activeWord = null;
+
+var appEl   = document.getElementById('app');
+var tipEl   = document.getElementById('tip');
+var panelEl = document.getElementById('panel');
+var selbar  = document.getElementById('selbar');
+var metaEl  = document.getElementById('pmeta');
+var playEl  = document.getElementById('playBtn');
+var dictEl  = document.getElementById('dictBtn');
+
+/* ============================================================
+   4. TEXT HELPERS
+   ============================================================ */
+function esc(s){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+var WORD_RE = /[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'’\-]*/g;
+
+function wordize(text){
+  var out = '', last = 0, m;
+  WORD_RE.lastIndex = 0;
+  while ((m = WORD_RE.exec(text)) !== null) {
+    out += esc(text.slice(last, m.index));
+    out += '<span class="w" data-w="' + esc(m[0]) + '">' + esc(m[0]) + '</span>';
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
+
+function body(text){ return state.dict ? wordize(text) : esc(text); }
+
+var ABBR_RE = /(?:^|[\s(])(?:cf|i\.e|e\.g|etc|Ch|Chs|n|no|nos|vs|Mr|Mrs|Ms|Dr|St|p|pp|esp|Prof|viz|al|ed|eds|trans|fig|vol)\.$/i;
+
+function splitSentences(text){
+  var out = [], start = 0, i, j, k;
+  for (i = 0; i < text.length; i++) {
+    var c = text.charAt(i);
+    if (c !== '.' && c !== '!' && c !== '?') continue;
+    j = i + 1;
+    while (j < text.length && '.!?)]"\'’”'.indexOf(text.charAt(j)) > -1) j++;
+    if (j >= text.length) break;
+    k = j;
+    while (k < text.length && /\s/.test(text.charAt(k))) k++;
+    if (k === j) continue;                                   /* no space -> not a boundary */
+    if (!/[A-Z"'(“‘]/.test(text.charAt(k))) continue;         /* next unit must start big */
+    var cand = text.slice(start, j);
+    if (ABBR_RE.test(cand)) continue;                        /* cf. / Ch. / i.e. ... */
+    if (cand.trim()) out.push(cand.trim());
+    start = k; i = k - 1;
+  }
+  var tail = text.slice(start).trim();
+  if (tail) out.push(tail);
+  return out.length ? out : [text];
+}
+
+function buildSents(){
+  SENTS = ARTICLE.blocks.map(function(b){
+    if (b.t === 't') {
+      var a = [];
+      b.rows.forEach(function(r){ a.push('Column A. ' + r[0] + '.'); a.push('Column B. ' + r[1] + '.'); });
+      return a;
+    }
+    return splitSentences(b.x);
+  });
+}
+
+function blockText(bi){
+  var b = ARTICLE.blocks[bi];
+  if (!b) return '';
+  return b.t === 't' ? SENTS[bi].join(' ') : b.x;
+}
+
+function cleanTts(s){ return s.replace(/[²³¹⁰-₟]/g, '').replace(/\s+/g, ' ').trim(); }
+
+function buildUnits(){
+  UNITS = [];
+  SENTS.forEach(function(sents, bi){
+    if (state.gran === 'sent') {
+      sents.forEach(function(s, si){ UNITS.push({ b:bi, s0:si, s1:si, text: cleanTts(s) }); });
+    } else {
+      var s0 = 0, buf = '';
+      sents.forEach(function(s, si){
+        if (buf && (buf + ' ' + s).length > PARA_MAX) {
+          UNITS.push({ b:bi, s0:s0, s1:si - 1, text: cleanTts(buf) });
+          s0 = si; buf = s;
+        } else { buf = buf ? buf + ' ' + s : s; }
+      });
+      if (buf) UNITS.push({ b:bi, s0:s0, s1:sents.length - 1, text: cleanTts(buf) });
+    }
+  });
+}
+
+/* ============================================================
+   5. RENDER
+   ============================================================ */
+function sentSpan(bi, si, display){
+  return '<span class="s" data-b="' + bi + '" data-s="' + si + '">' + body(display) + '</span>';
+}
+
+function renderArticle(){
+  var h = '<p class="title">' + esc(ARTICLE.kicker) + '</p><h1>' + esc(ARTICLE.title) + '</h1>';
+  ARTICLE.blocks.forEach(function(b, bi){
+    var inner;
+    if (b.t === 't') {
+      inner = '<table class="ab"><thead><tr><th>A</th><th>B</th></tr></thead><tbody>' +
+        b.rows.map(function(r, ri){
+          return '<tr><td>' + sentSpan(bi, ri * 2, r[0]) + '</td><td>' + sentSpan(bi, ri * 2 + 1, r[1]) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    } else {
+      var inside = SENTS[bi].map(function(s, si){ return sentSpan(bi, si, s); }).join(' ');
+      if (b.t === 'p')      inner = '<p class="para">' + inside + '</p>';
+      else if (b.t === 'q') inner = '<blockquote class="quote">' + inside + '</blockquote>';
+      else                  inner = '<div class="note">' + inside + '</div>';
+    }
+    h += '<div class="blk" data-b="' + bi + '">' + inner + '</div>';
+  });
+  appEl.innerHTML = h;
+  paintHighlight();
+}
+
+function paintHighlight(){
+  var prev = appEl.querySelectorAll('.s.reading');
+  for (var i = 0; i < prev.length; i++) prev[i].classList.remove('reading');
+  if (state.mode !== 'article' || state.unit < 0 || state.unit >= UNITS.length) return;
+  var u = UNITS[state.unit];
+  for (var si = u.s0; si <= u.s1; si++) {
+    var el = appEl.querySelector('.s[data-b="' + u.b + '"][data-s="' + si + '"]');
+    if (el) el.classList.add('reading');
+  }
+}
+
+var ICON_PLAY  = '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>';
+var ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+
+function paintPlayer(){
+  playEl.innerHTML = state.playing ? ICON_PAUSE : ICON_PLAY;
+  playEl.title = state.playing ? 'Pause' : 'Play';
+  metaEl.classList.toggle('err', state.status === 'error');
+  var pos = state.unit >= 0 ? (state.unit + 1) + ' / ' + UNITS.length : '— / ' + UNITS.length;
+  var where = state.mode === 'sel' ? 'Selection' : pos;
+  if (state.status === 'loading')      metaEl.innerHTML = '<span class="spin"></span>Synthesizing · <b>' + esc(where) + '</b>';
+  else if (state.status === 'error')   metaEl.textContent = state.message;
+  else if (state.status === 'playing') metaEl.innerHTML = 'Narrating · <b>' + esc(where) + '</b>';
+  else if (state.status === 'paused')  metaEl.innerHTML = 'Paused · <b>' + esc(where) + '</b>';
+  else                                 metaEl.innerHTML = 'Aoede — ready · <b>' + esc(pos) + '</b>';
+}
+
+function paintPanel(){
+  panelEl.classList.toggle('open', state.panelOpen);
+  if (!state.panelOpen) return;
+  var h = '<button class="padd" data-action="bm-add">Bookmark current position</button>';
+  if (!state.bookmarks.length) h += '<div class="pempty">No bookmarks yet.</div>';
+  else h += state.bookmarks.map(function(bi){
+    return '<div class="prow" data-action="bm-go" data-i="' + bi + '">' +
+           '<span class="n">' + (bi + 1) + '</span>' +
+           '<span class="t">' + esc(blockText(bi).slice(0, 110)) + '…</span>' +
+           '<span class="x" data-action="bm-del" data-i="' + bi + '">×</span></div>';
+  }).join('');
+  panelEl.innerHTML = h;
+}
+
+/* ============================================================
+   6. GEMINI CALLS
+   ============================================================ */
+function callApi(model, payload){
+  var url = API_ROOT + model + ':generateContent?key=' + API_KEY;
+  var tries = 0;
+  function attempt(){
+    tries++;
+    return fetch(url, {
+      method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload)
+    }).catch(function(e){
+      /* fetch() rejects only on network-level failure: no response at all. */
+      throw new Error('Network blocked (' + (e && e.message ? e.message : 'fetch failed') +
+        '). Run this page inside Gemini Canvas, or set API_KEY at the top of the script.');
+    }).then(function(res){
+      if ((res.status === 429 || res.status >= 500) && tries < 4) {
+        return new Promise(function(r){ setTimeout(r, Math.pow(2, tries) * 400); }).then(attempt);
+      }
+      if (!res.ok) {
+        return res.text().then(function(t){ throw new Error('API ' + res.status + (t ? ' · ' + t.slice(0, 110) : '')); });
+      }
+      return res.json();
+    });
+  }
+  return attempt();
+}
+
+/* ---- AI context dictionary: word / phrase / clause / sentence ---- */
+function explain(target, context){
+  var key = target.toLowerCase();
+  if (explainCache.has(key)) return explainCache.get(key);
+
+  var prompt =
+    'You help an intermediate English learner read a difficult academic book.\n' +
+    'Write ONLY in simple English that a middle-school student can read (about CEFR A2-B1).\n' +
+    'Never use Korean. Never use hard or academic words in your answer. Short words, short sentences.\n\n' +
+    'SELECTED TEXT:\n"""' + target.slice(0, 1200) + '"""\n\n' +
+    (context ? 'IT COMES FROM THIS PASSAGE:\n"""' + context.slice(0, 1400) + '"""\n\n'
+             : 'There is no surrounding passage. Explain its common meaning.\n\n') +
+    'Decide if the selected text is a WORD, a PHRASE, a CLAUSE, or a SENTENCE.\n' +
+    'Then answer in exactly three lines, nothing else:\n' +
+    'TYPE: word | phrase | clause | sentence\n' +
+    'PLAIN: <say the same thing in easy English. For a word, give an easy definition that fits this passage. Max 25 words.>\n' +
+    'WHY: <one easy sentence: how it is used here, or what the writer is really saying. Max 25 words.>';
+
+  var p = callApi(TEXT_MODEL, {
+    contents:[{ parts:[{ text: prompt }] }],
+    generationConfig:{ temperature:0.2, maxOutputTokens:300 }
+  }).then(function(json){
+    var t = '';
+    try { t = json.candidates[0].content.parts.map(function(pt){ return pt.text || ''; }).join(''); } catch (e) { t = ''; }
+    var out = { type:'', plain:'', why:'' };
+    t.split('\n').forEach(function(line){
+      var s = line.trim();
+      if (/^TYPE\s*:/i.test(s))       out.type  = s.replace(/^TYPE\s*:/i, '').trim();
+      else if (/^PLAIN\s*:/i.test(s)) out.plain = s.replace(/^PLAIN\s*:/i, '').trim();
+      else if (/^WHY\s*:/i.test(s))   out.why   = s.replace(/^WHY\s*:/i, '').trim();
+    });
+    if (!out.plain && !out.why) out.plain = t.trim() || 'No explanation returned.';
+    return out;
+  }).catch(function(err){ explainCache.delete(key); throw err; });
+
+  explainCache.set(key, p);
+  return p;
+}
+
+/* ---- Aoede TTS ---- */
+function b64ToBytes(b64){
+  var bin = atob(b64), len = bin.length, out = new Uint8Array(len);
+  for (var i = 0; i < len; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function pcmToWav(pcm, rate){
+  var len = pcm.length, buf = new ArrayBuffer(44 + len), v = new DataView(buf);
+  function s(o, str){ for (var i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); }
+  s(0,'RIFF');  v.setUint32(4, 36 + len, true);  s(8,'WAVE');
+  s(12,'fmt '); v.setUint32(16, 16, true);       v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);                      v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);               v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);                     s(36,'data');
+  v.setUint32(40, len, true);
+  new Uint8Array(buf, 44).set(pcm);
+  return new Blob([buf], { type:'audio/wav' });
+}
+
+function fetchAudio(text){
+  var key = state.ttsModel + '|' + text;
+  if (audioCache.has(key)) return audioCache.get(key);
+  var p = callApi(TTS_MODELS[state.ttsModel], {
+    contents:[{ parts:[{ text: TTS_STYLE + text }] }],
+    generationConfig:{
+      responseModalities:['AUDIO'],
+      speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName: VOICE } } }
+    }
+  }).then(function(json){
+    var part;
+    try { part = json.candidates[0].content.parts[0].inlineData; } catch (e) { part = null; }
+    if (!part || !part.data) throw new Error('No audio returned');
+    var rm = /rate=(\d+)/.exec(part.mimeType || '');
+    return URL.createObjectURL(pcmToWav(b64ToBytes(part.data), rm ? parseInt(rm[1], 10) : 24000));
+  }).catch(function(err){ audioCache.delete(key); throw err; });
+  audioCache.set(key, p);
+  return p;
+}
+
+/* ============================================================
+   7. PLAYBACK
+   ============================================================ */
+function scrollToUnit(u){
+  var el = appEl.querySelector('.s[data-b="' + u.b + '"][data-s="' + u.s0 + '"]');
+  if (!el) return;
+  var r = el.getBoundingClientRect();
+  if (r.top < 120 || r.bottom > window.innerHeight - 40) {
+    window.scrollTo({ top: window.scrollY + r.top - 170, behavior:'smooth' });
+  }
+}
+
+function fail(err){
+  state.status = 'error';
+  state.playing = false;
+  state.message = String(err && err.message ? err.message : err).slice(0, 90);
+  paintPlayer();
+}
+
+function playUnit(i){
+  if (i < 0) i = 0;
+  if (i >= UNITS.length) { audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer(); return; }
+  state.mode = 'article';
+  state.unit = i;
+  state.status = 'loading';
+  state.playing = true;
+  paintPlayer(); paintHighlight();
+
+  fetchAudio(UNITS[i].text).then(function(url){
+    if (state.unit !== i || state.mode !== 'article' || !state.playing) return;
+    audioEl.src = url;
+    return audioEl.play().then(function(){
+      state.status = 'playing'; paintPlayer();
+      scrollToUnit(UNITS[i]);
+      if (i + 1 < UNITS.length) fetchAudio(UNITS[i + 1].text).catch(function(){});
+    });
+  }).catch(fail);
+}
+
+function playSelection(){
+  if (!state.sel) return;
+  var text = cleanTts(state.sel.text).slice(0, SEL_MAX);
+  if (!text) return;
+  audioEl.pause();
+  state.mode = 'sel';
+  state.playing = true;
+  state.status = 'loading';
+  paintPlayer(); paintHighlight();
+  fetchAudio(text).then(function(url){
+    if (state.mode !== 'sel' || !state.playing) return;
+    audioEl.src = url;
+    return audioEl.play().then(function(){ state.status = 'playing'; paintPlayer(); });
+  }).catch(fail);
+}
+
+function togglePlay(){
+  if (state.playing) {
+    audioEl.pause(); state.playing = false; state.status = 'paused'; paintPlayer(); return;
+  }
+  if (audioEl.src && audioEl.currentTime > 0 && !audioEl.ended) {
+    state.playing = true;
+    audioEl.play().then(function(){ state.status = 'playing'; paintPlayer(); })
+                  .catch(function(){ state.playing = false; state.status = 'ready'; paintPlayer(); });
+    return;
+  }
+  playUnit(state.unit < 0 ? 0 : state.unit);
+}
+
+audioEl.addEventListener('ended', function(){
+  if (!state.playing) return;
+  if (state.mode === 'sel') {
+    state.playing = false; state.mode = 'article'; state.status = 'ready';
+    paintPlayer(); paintHighlight();
+  } else {
+    playUnit(state.unit + 1);
+  }
+});
+
+/* ============================================================
+   8. SELECTION BAR + EXPLAIN TOOLTIP
+   ============================================================ */
+function place(el, rect){
+  el.style.left = '0px'; el.style.top = '0px';
+  var w = el.offsetWidth, h = el.offsetHeight;
+  var left = Math.min(Math.max(8, rect.left + rect.width / 2 - w / 2), window.innerWidth - w - 8);
+  var top  = rect.top - h - 10;
+  if (top < 104) top = rect.bottom + 10;
+  if (top + h > window.innerHeight - 8) top = Math.max(104, window.innerHeight - h - 8);
+  el.style.left = left + 'px';
+  el.style.top  = top + 'px';
+}
+
+function hideSelbar(){ selbar.classList.remove('open'); }
+
+function hideTip(){
+  tipEl.classList.remove('open');
+  if (activeWord) { activeWord.classList.remove('on'); activeWord = null; }
+}
+
+function showTip(target, context, rect, anchorEl){
+  if (activeWord && activeWord !== anchorEl) activeWord.classList.remove('on');
+  activeWord = anchorEl || null;
+  if (activeWord) activeWord.classList.add('on');
+
+  var head = target.length > 90 ? target.slice(0, 90) + '…' : target;
+  tipEl.classList.add('open');
+  tipEl.innerHTML = '<div class="hw">' + esc(head) + '</div><div class="load">explaining…</div>';
+  place(tipEl, rect);
+
+  var token = target;
+  explain(target, context).then(function(d){
+    if (!tipEl.classList.contains('open')) return;
+    tipEl.innerHTML =
+      '<div class="hw">' + esc(head) + '</div>' +
+      (d.type  ? '<div class="chip">' + esc(d.type) + '</div>' : '') +
+      (d.plain ? '<div class="en">'   + esc(d.plain) + '</div>' : '') +
+      (d.why   ? '<div class="why">'  + esc(d.why)   + '</div>' : '');
+    place(tipEl, rect);
+  }).catch(function(err){
+    if (!tipEl.classList.contains('open')) return;
+    tipEl.innerHTML = '<div class="hw">' + esc(head) + '</div><div class="load">' +
+      esc(String(err.message || err).slice(0, 80)) + '</div>';
+  });
+  return token;
+}
+
+/* Search box: find the first block that contains the term, so the
+   explanation is grounded in how this book actually uses it. */
+function findContext(term){
+  var t = term.toLowerCase();
+  for (var i = 0; i < ARTICLE.blocks.length; i++) {
+    var bt = blockText(i);
+    if (bt.toLowerCase().indexOf(t) > -1) return bt;
+  }
+  return '';
+}
+
+function runSearch(){
+  var input = document.getElementById('q');
+  var term = (input.value || '').replace(/\s+/g, ' ').trim();
+  if (!term) return;
+  hideSelbar();
+  input.blur();
+  showTip(term, findContext(term), input.getBoundingClientRect(), null);
+}
+
+function evalSelection(){
+  var sel = window.getSelection ? window.getSelection() : null;
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) { hideSelbar(); return; }
+  var text = sel.toString().replace(/\s+/g, ' ').trim();
+  if (!text) { hideSelbar(); return; }
+  var node = sel.anchorNode;
+  var el = node ? (node.nodeType === 1 ? node : node.parentElement) : null;
+  if (!el || !appEl.contains(el)) { hideSelbar(); return; }
+  var blk = el.closest ? el.closest('.blk') : null;
+  state.sel = { text: text, ctx: blk ? blockText(Number(blk.getAttribute('data-b'))) : '' };
+  hideTip();
+  selbar.classList.add('open');
+  place(selbar, sel.getRangeAt(0).getBoundingClientRect());
+}
+
+/* ============================================================
+   9. BOOKMARKS
+   ============================================================ */
+function topVisibleBlock(){
+  var els = appEl.querySelectorAll('.blk');
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].getBoundingClientRect().bottom > 130) return Number(els[i].getAttribute('data-b'));
+  }
+  return 0;
+}
+
+function addBookmark(){
+  var bi = (state.mode === 'article' && state.playing && state.unit >= 0) ? UNITS[state.unit].b : topVisibleBlock();
+  if (state.bookmarks.indexOf(bi) === -1) {
+    state.bookmarks.push(bi);
+    state.bookmarks.sort(function(a, b){ return a - b; });
+  }
+  paintPanel();
+}
+
+/* ============================================================
+   10. EVENT DELEGATION  (registered once)
+   ============================================================ */
+selbar.addEventListener('mousedown', function(ev){ ev.preventDefault(); }, false);
+
+document.addEventListener('click', function(ev){
+  var t = ev.target;
+  var act = t.closest ? t.closest('[data-action]') : null;
+
+  if (!act) {
+    var wordEl = t.closest ? t.closest('.w') : null;
+    if (wordEl && state.dict && appEl.contains(wordEl)) {
+      var blk = wordEl.closest('.blk');
+      showTip(wordEl.getAttribute('data-w'),
+              blk ? blockText(Number(blk.getAttribute('data-b'))) : '',
+              wordEl.getBoundingClientRect(), wordEl);
+      return;
+    }
+    if (!tipEl.contains(t)) hideTip();
+    if (!panelEl.contains(t)) { state.panelOpen = false; paintPanel(); }
+    return;
+  }
+
+  var a = act.getAttribute('data-action');
+
+  if (a === 'dict') {
+    state.dict = !state.dict;
+    dictEl.setAttribute('aria-pressed', state.dict ? 'true' : 'false');
+    document.body.classList.toggle('dict', state.dict);
+    hideTip();
+    renderArticle();
+  }
+  else if (a === 'panel')  { state.panelOpen = !state.panelOpen; paintPanel(); }
+  else if (a === 'bm-add') { addBookmark(); }
+  else if (a === 'bm-del') {
+    ev.stopPropagation();
+    var di = Number(act.getAttribute('data-i'));
+    state.bookmarks = state.bookmarks.filter(function(x){ return x !== di; });
+    paintPanel();
+  }
+  else if (a === 'bm-go') {
+    var gi = Number(act.getAttribute('data-i'));
+    var gel = appEl.querySelector('.blk[data-b="' + gi + '"]');
+    if (gel) window.scrollTo({ top: window.scrollY + gel.getBoundingClientRect().top - 130, behavior:'smooth' });
+    state.panelOpen = false; paintPanel();
+  }
+  else if (a === 'play') { togglePlay(); }
+  else if (a === 'prev') { playUnit(state.unit <= 0 ? 0 : state.unit - 1); }
+  else if (a === 'next') { playUnit(state.unit + 1); }
+  else if (a === 'sel-explain') {
+    if (!state.sel) return;
+    var r = selbar.getBoundingClientRect();
+    hideSelbar();
+    showTip(state.sel.text, state.sel.ctx, r, null);
+  }
+  else if (a === 'sel-play') { hideSelbar(); playSelection(); }
+}, false);
+
+document.addEventListener('change', function(ev){
+  var act = ev.target.closest ? ev.target.closest('[data-action]') : null;
+  if (!act) return;
+  var a = act.getAttribute('data-action');
+  if (a === 'model') {
+    state.ttsModel = act.value;
+    audioEl.pause(); state.playing = false; state.status = 'ready'; paintPlayer();
+  } else if (a === 'gran') {
+    var atBlock = (state.unit >= 0 && UNITS[state.unit]) ? UNITS[state.unit].b : -1;
+    state.gran = act.value;
+    audioEl.pause(); state.playing = false; state.status = 'ready';
+    buildUnits();
+    state.unit = -1;
+    if (atBlock >= 0) {
+      for (var i = 0; i < UNITS.length; i++) { if (UNITS[i].b === atBlock) { state.unit = i; break; } }
+    }
+    paintPlayer(); paintHighlight();
+  }
+}, false);
+
+appEl.addEventListener('mouseover', function(ev){
+  if (!state.dict) return;
+  var el = ev.target.closest ? ev.target.closest('.w') : null;
+  if (!el) return;
+  clearTimeout(hoverTimer);
+  hoverTimer = setTimeout(function(){
+    var s = window.getSelection ? window.getSelection() : null;
+    if (s && !s.isCollapsed) return;
+    var blk = el.closest('.blk');
+    showTip(el.getAttribute('data-w'), blk ? blockText(Number(blk.getAttribute('data-b'))) : '',
+            el.getBoundingClientRect(), el);
+  }, 340);
+}, false);
+
+appEl.addEventListener('mouseout', function(){ clearTimeout(hoverTimer); }, false);
+
+document.addEventListener('selectionchange', function(){
+  clearTimeout(selTimer);
+  selTimer = setTimeout(evalSelection, 260);
+}, false);
+
+document.addEventListener('keydown', function(ev){
+  if (ev.target && ev.target.id === 'q') {
+    if (ev.key === 'Enter') { ev.preventDefault(); runSearch(); }
+    else if (ev.key === 'Escape') { ev.target.value = ''; ev.target.blur(); hideTip(); }
+    return;
+  }
+  if (ev.key === 'Escape') { hideTip(); hideSelbar(); state.panelOpen = false; paintPanel(); }
+}, false);
+
+window.addEventListener('scroll', function(){
+  if (tipEl.classList.contains('open')) hideTip();
+  if (selbar.classList.contains('open')) hideSelbar();
+}, { passive:true });
+
+/* ============================================================
+   11. BOOT
+   ============================================================ */
+buildSents();
+buildUnits();
+renderArticle();
+paintPlayer();
+paintPanel();
+
+})();
+</script>
+</body>
+</html>
