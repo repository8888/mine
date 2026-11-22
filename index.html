@@ -1,38 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Reading</title>
+<title>Study Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400&family=Inter:wght@400&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   :root{
-    --bg:#fbfaf8; --ink:#1c1b19; --ink-faint:#9c9891; --accent:#8a6f4e;
+    --bg:#fbfaf8; --ink:#1c1b19; --ink-faint:#9c9891; --accent:#8a6f4e; --rule:#ece9e3;
     --serif:'Newsreader',Georgia,'Times New Roman',serif;
     --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{background:var(--bg);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;}
-  .wrap{max-width:560px;margin:0 auto;padding:96px 24px;}
-  h1{font-family:var(--sans);font-weight:400;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--ink-faint);margin:0 0 40px;}
+  .wrap{max-width:580px;margin:0 auto;padding:88px 24px 112px;}
+  section{margin:0 0 56px;}
+  section:last-child{margin-bottom:0;}
+  h2{font-family:var(--sans);font-weight:500;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 24px;padding-bottom:10px;border-bottom:1px solid var(--rule);}
   ul{list-style:none;margin:0;padding:0;}
-  li{margin:0 0 28px;}
-  a{color:inherit;text-decoration:none;font-size:22px;line-height:1.3;}
+  li{margin:0 0 24px;}
+  li:last-child{margin-bottom:0;}
+  a{color:inherit;text-decoration:none;font-size:21px;line-height:1.35;}
   a:hover{color:var(--accent);}
   .src{display:block;font-family:var(--sans);font-size:11.5px;color:var(--ink-faint);margin-top:4px;}
-  .empty{font-family:var(--sans);font-size:13px;color:var(--ink-faint);}
-  @media (max-width:520px){ .wrap{padding:56px 16px;} a{font-size:20px;} }
+  .empty{font-family:var(--sans);font-size:13px;color:var(--ink-faint);margin:0;}
+  @media (max-width:520px){ .wrap{padding:52px 16px 80px;} a{font-size:19px;} }
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <h1>Reading</h1>
   <main id="app">
     <noscript><p class="empty">This page needs JavaScript.</p></noscript>
   </main>
@@ -42,17 +44,59 @@
 'use strict';
 (function () {
 
-/* READERS — one object per reader file in this repository, newest first.
-     file   : file name (same folder as index.html)
-     title  : title shown in the list
-     source : author · year (optional) */
-var READERS = [
-  { file:'tyranny-of-convenience-reader.html', title:'The Tyranny of Convenience', source:'Tim Wu · 2018' }
+/* SECTIONS — GitHub repository structure:
+     content/     : HTML readers & French podcast study pages
+     flashcards/  : HTML flashcard decks
+     assets/audio : .m4a audio files
+     assets/videos: .mp4 video files
+   Add new items at the top of each section's items array (newest first). */
+var SECTIONS = [
+  {
+    heading: 'French Podcast',
+    items: [
+      {
+        file: 'content/a1plus-weekend-plan-vs-rest_video.html',
+        title: 'Un week-end organisé vs Rester à la maison (Video)',
+        source: 'A1+ · Marie & Léo · Video + Script'
+      },
+      {
+        file: 'content/a1plus-weekend-plan-vs-rest_audio.html',
+        title: 'Un week-end organisé vs Rester à la maison (Audio)',
+        source: 'A1+ · Marie & Léo · Audio + Dictation'
+      }
+    ]
+  },
+  {
+    heading: 'Reading',
+    items: [
+      {
+        file: 'content/tyranny-of-convenience-reader.html',
+        title: 'The Tyranny of Convenience',
+        source: 'Tim Wu · 2018'
+      },
+      {
+        file: 'content/fragility-of-goodness-ch1-reader.html',
+        title: 'The Fragility of Goodness — Ch. 1',
+        source: 'Martha C. Nussbaum'
+      },
+      {
+        file: 'content/fragility-of-goodness-ch5-reader.html',
+        title: 'The Fragility of Goodness — Ch. 5',
+        source: 'Martha C. Nussbaum'
+      }
+    ]
+  },
+  {
+    heading: 'Flashcards',
+    items: [
+      /* 예시:
+      { file: 'flashcards/a1plus-weekend-plan-vs-rest.html', title: 'Weekend Plan vs Rest (10 words)', source: 'A1+' }
+      */
+    ]
+  }
 ];
 
 /* ══════════════════ nothing below needs editing ══════════════════ */
-
-var state = { readers: READERS };
 
 function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -64,13 +108,14 @@ function itemHtml(r){
          (r.source ? '<span class="src">' + esc(r.source) + '</span>' : '') + '</li>';
 }
 
-function render(){
-  document.getElementById('app').innerHTML = state.readers.length
-    ? '<ul>' + state.readers.map(itemHtml).join('') + '</ul>'
-    : '<p class="empty">No readers yet.</p>';
+function sectionHtml(sec){
+  var body = sec.items.length
+    ? '<ul>' + sec.items.map(itemHtml).join('') + '</ul>'
+    : '<p class="empty">No items yet.</p>';
+  return '<section><h2>' + esc(sec.heading) + '</h2>' + body + '</section>';
 }
 
-render();
+document.getElementById('app').innerHTML = SECTIONS.map(sectionHtml).join('');
 
 })();
 </script>
